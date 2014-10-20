@@ -207,7 +207,7 @@ public class Triangle {
 		return new Triangle[] { t1, t2, t3, t4 };
 	}
 	
-	Triangle[] add(Vertex v) {
+	Triangle[] (Vertex v) {
 		
 		Triangle t1 = new Triangle(new Vertex[] {vertices[0], vertices[1], v});
 		Triangle t2 = new Triangle(new Vertex[] {vertices[1], vertices[2], v});

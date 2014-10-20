@@ -76,12 +76,9 @@ var DrawTriangles = function() {
 var Triangles = [];
 
 //triangle object 
-var Triangle = function(x1, y1, x2, y2, x3, y3) {
-	this.vertices = [
-		{ x: x1, y: y1},
-		{ x: x2, y: y2},
-		{ x: x3, y: y3}
-	];
+var Triangle = function(v1, v2, v3) {
+	this.vertices = [ v1, v2, v3 ];
+	this.adjacent = [];
 }
 //v for vertexxa
 Triangle.prototype.IsVertexInside = function(v) {
@@ -106,16 +103,119 @@ Triangle.prototype.HasPointInCircle = function(v, r) {
 	var two = vertices[1];
 	var three = vertices[2];
 	
+	//arange points counter clockwise because reasons
+	if(!IsLeft([ three, one ], two) {
+		var temp = one;
+		one = two;
+		two = temp;
+	}
 	
+	var a = one.x - p.x;
+	var b = one.y - p.y;
+	var c = (one.x*one.x - p.x*p.x) + (one.y*one.y - p.y*p.y);
+	var d = two.x - p.x;
+	var e = two.y - p.y;
+	var f = (two.x*two.x - p.x*p.x) + (two.y*two.y - p.y*p.y);
+	var g = three.x - p.x;
+	var h = three.y - p.y;
+	var i = (three.x*three.x - p.x*p.x) + (three.y*three.y - p.y*p.y);
 	
+	var det = (a*(e*i - f*h)) - (b*(d*i - f*g)) + (c*(d*h - e*g));
+	
+	return det > 0;
 }
+//returns the unique vertex of the current triangle given the passed triangle
+Triangle.prototype.UniqueVertex = function(triangle) {
+	for(var i = 0; i < 3; i++) {
+		var equal = false;
+		for(var j = 0; j < 3; j++) {
+			if(this.vertices[i].x == triangle.vertices[j].x && this.vertices[i].y == triangle.vertices[j].y) {
+				equal = true;
+			}
+		}
+		if(!equal) {
+			return this.vertices[i];
+		}
+	}
+	return null;
+}
+//returns if the triangles share two vertices
+Triangle.prototype.ShareTwoPoints = function(other) {
+	var count = 0;
+	for(var i = 0; i < 3; i++) {
+		for(var j = 0; j < 3; j++) {
+			if(this.vertices[i].x == other.vertices[j].x && this.vertices[i].y == other.vertices[j].y) {
+				count++;
+			}
+		}
+	}
+	
+	return 2 == count;
+}
+//Adds a vertex to the current triangle. this kills the current triangle
+Triangle.prototype.AddVertex = function(vertex) {
+	var triangle = GetTriangle(vertex);
+
+	var t1 = new Triangle(this.vertices[0], this.vertices[1], vertex);
+	var t2 = new Triangle(this.vertices[1], this.vertices[2], vertex);
+	var t3 = new Triangle(this.vertices[0], vertices[2], vertex);
+
+	for(var i = 0; i < this.adjacent.length; i++) {
+		var t = this.adjacent[i];
+		t.adjacent.remove(this);
+		if(t1.share2points(t)) {
+			t.adjacent.push(t1);
+			t1.adjacent.push(t);
+		}
+		if(t2.share2points(t)) {
+			t.adjacent.push(t2);
+			t2.adjacent.push(t);
+		}
+		if(t3.share2points(t)) {
+			t.adjacent.push(t3);
+			t3.adjacent.push(t);
+		}
+	}
+	
+	t1.adjacent.push(t2);
+	t1.adjacent.push(t3);
+	
+	t2.adjacent.push(t1);
+	t2.adjacent.push(t3);
+	
+	t3.adjacent.push(t1);
+	t3.adjacent.push(t2);
+	
+	Triangles.push(t1);
+	Triangles.push(t2);
+	Triangles.push(t3);
+	
+	Triangles.remove(this);
+	
+	return [ t1, t2, t3 ];
+}
+
 
 //fun static methods because organisation is for scurbs
 
 //determines if candidate is to the left of line where line is vertex a -> b
 var IsLeft = function(line, candidate) {
-
+	return ((line[1].x - line[0].x)*(candidate.y - line[0].y) - (line[1].y - line[0].y)*(candidate.x - line[0].x)) >= 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//interactive bs
 
 var SelectTriangle = function(x, y) {
 	DrawTriangles();
@@ -123,22 +223,18 @@ var SelectTriangle = function(x, y) {
 		x: x,
 		y: y
 	}
-	for(var i = 0; i < Triangles.length; i++) {
-		if(Triangles[i].IsVertexInside(vertex)) {
-			DrawTriangle(Triangles[i], true);
-		}
-	}
+	var triangle = GetTriangle(vertex);
+	DrawTriangle(triangle, true);
 }
 
-
-
-
-
-
-
-
-
-
+var GetTriangle = function(vertex) {
+	for(var i = 0; i < Triangles.length; i++) {
+		if(Triangles[i].IsVertexInside(vertex)) {
+			return Triangles[i];
+		}
+	}
+	return null;
+}
 
 </script>
 
@@ -147,8 +243,13 @@ var SelectTriangle = function(x, y) {
 //init rubbish
 window.onload = function() {
 
-Triangles.push(new Triangle(TOPLEFT.x, TOPLEFT.y, TOPRIGHT.x, TOPRIGHT.y, BOTTOMLEFT.x, BOTTOMLEFT.y));
-Triangles.push(new Triangle(BOTTOMRIGHT.x, BOTTOMRIGHT.y, TOPRIGHT.x, TOPRIGHT.y, BOTTOMLEFT.x, BOTTOMLEFT.y));
+var t1 = new Triangle(TOPLEFT, TOPRIGHT, BOTTOMLEFT);
+var t2 = new Triangle(BOTTOMRIGHT, TOPRIGHT, BOTTOMLEFT);
+t1.adjacent.push(t2);
+t2.adjacent.push(t1);
+Triangles.push(t1);
+Triangles.push(t2);
+
 
 DrawTriangles();
 
