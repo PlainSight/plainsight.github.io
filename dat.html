@@ -40,7 +40,7 @@ var Ctx=c.getContext("2d");
 //ctx.strokeStyle="#FF0000";
 //ctx.strokeStyle(xpos,ypos,width,height);
 //ctx.drawLine(x1, y1, x2, y2);
-Ctx.lineWidth = 1;
+Ctx.lineWidth = 2;
 
 var DrawTriangle = function(triangle, highlight) {
 	if(highlight) {
@@ -79,6 +79,7 @@ var Triangles = [];
 var Triangle = function(v1, v2, v3) {
 	this.vertices = [ v1, v2, v3 ];
 	this.adjacent = [];
+	this.dead = false;
 }
 //v for vertexxa
 Triangle.prototype.IsVertexInside = function(v) {
@@ -104,7 +105,7 @@ Triangle.prototype.HasPointInCircle = function(v, r) {
 	var three = vertices[2];
 	
 	//arange points counter clockwise because reasons
-	if(!IsLeft([ three, one ], two) {
+	if(!IsLeft([ three, one ], two)) {
 		var temp = one;
 		one = two;
 		two = temp;
@@ -196,16 +197,102 @@ Triangle.prototype.AddVertex = function(vertex) {
 }
 
 
-//fun static methods because organisation is for scurbs
+//fun static methods because organisation is for scrubs
 
 //determines if candidate is to the left of line where line is vertex a -> b
 var IsLeft = function(line, candidate) {
 	return ((line[1].x - line[0].x)*(candidate.y - line[0].y) - (line[1].y - line[0].y)*(candidate.x - line[0].x)) >= 0;
 }
 
+var GetTriangle = function(vertex) {
+	for(var i = 0; i < Triangles.length; i++) {
+		if(Triangles[i].IsVertexInside(vertex)) {
+			return Triangles[i];
+		}
+	}
+	return null;
+}
 
+var Flip = function(t1, t2) {
+	Vertex[] common = t1.sharedVertices(t2);
+	
+	Vertex[] uncommon = new Vertex[2];
+	uncommon[0] = t1.uniqueVertex(t2);
+	uncommon[1] = t2.uniqueVertex(t1);
+	
+	//make new triangles
+	Triangle t1n = new Triangle(new Vertex[] { uncommon[0], uncommon[1], common[0] });
+	Triangle t2n = new Triangle(new Vertex[] { uncommon[0], uncommon[1], common[1] });
+	
+	ArrayList<Triangle> adjacents = new ArrayList<Triangle>();
+	adjacents.addAll(t1.adjacent);
+	adjacents.addAll(t2.adjacent);
+	adjacents.remove(t1);
+	adjacents.remove(t2);
+	
+	//remove old triangles from their neighbours adjacent lists
+	
+	for(Triangle t : t1.adjacent) {
+		t.adjacent.remove(t1);
+	}
+	
+	for(Triangle t : t2.adjacent) {
+		t.adjacent.remove(t2);
+	}
+	
+	for(Triangle t : adjacents) {
+		
+		if(t1n.share2points(t)) {
+			t.adjacent.add(t1n);
+			t1n.adjacent.add(t);
+		}
+		
+		if(t2n.share2points(t)) {
+			t.adjacent.add(t2n);
+			t2n.adjacent.add(t);
+		}	
+	}
+	
+	t1n.adjacent.add(t2n);
+	t2n.adjacent.add(t1n);
+	
+	if(t1n.adjacent.size() > 3) {
+	
+		ArrayList<Triangle> twoadj = new ArrayList<Triangle>();
+		
+		for(Triangle t : triangles) {
+			
+			if(t.adjacent.size() < 3) {
+				twoadj.add(t);
+			}
+		}
 
-
+		throw new ArrayIndexOutOfBoundsException(t1n.adjacent.size());
+	}
+	if(t2n.adjacent.size() > 3) {
+		engine.ProduceErrorAppearance();
+		
+		ArrayList<Triangle> twoadj = new ArrayList<Triangle>();
+		
+		for(Triangle t : triangles) {
+			
+			if(t.adjacent.size() < 3) {
+				twoadj.add(t);
+			}
+		}
+		
+		throw new ArrayIndexOutOfBoundsException(t2n.adjacent.size());
+	}
+	
+	Triangles.remove(t1);
+	t1.dead = true;
+	Triangles.remove(t2);
+	t2.dead = true;
+	AddTriangle(t1n);
+	AddTriangle(t2n);
+			
+	return [ t1n, t2n ];
+}
 
 
 
@@ -225,15 +312,6 @@ var SelectTriangle = function(x, y) {
 	}
 	var triangle = GetTriangle(vertex);
 	DrawTriangle(triangle, true);
-}
-
-var GetTriangle = function(vertex) {
-	for(var i = 0; i < Triangles.length; i++) {
-		if(Triangles[i].IsVertexInside(vertex)) {
-			return Triangles[i];
-		}
-	}
-	return null;
 }
 
 </script>
