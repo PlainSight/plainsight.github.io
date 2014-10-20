@@ -20,20 +20,6 @@ public void getTriangleData(ArrayList<Integer[]> array) {
 	}
 }
 
-public Path GetPath(int startx, int starty, int endx, int endy) {
-	
-	PathSummary ps = new PathSummary(startx, starty, endx, endy);
-	
-	if(cachedPaths.containsKey(ps)) {
-		return cachedPaths.get(ps);
-	} else {
-		Path path = new Path(startx, starty, endx, endy);
-		
-		cachedPaths.put(ps, path);
-		
-		return path;
-	}
-}
 
 public Triangle getTriangle(int x, int y) {
 	for (Triangle t : triangles) {

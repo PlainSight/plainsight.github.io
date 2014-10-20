@@ -77,24 +77,6 @@ public class Triangle {
 		return null;
 	}
 	
-	boolean vertexInTriangle(Vertex v)
-	{
-		Vertex a = vertices[0];
-		Vertex b = vertices[1];
-		Vertex c = vertices[2];
-		
-	    int av_x = v.x-a.x;
-	    int av_y = v.y-a.y;
-
-	    boolean v_ab = (b.x-a.x)*av_y-(b.y-a.y)*av_x > 0;
-
-	    if((c.x-a.x)*av_y-(c.y-a.y)*av_x > 0 == v_ab) return false;
-
-	    if((c.x-b.x)*(v.y-b.y)-(c.y-b.y)*(v.x-b.x) > 0 != v_ab) return false;
-
-	    return true;
-	}
-	
 	boolean vertexOnTriangleEdge(Vertex v) {
 		
 		for(int i = 0; i < 3; i++) {

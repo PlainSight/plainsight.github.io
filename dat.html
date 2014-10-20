@@ -6,7 +6,7 @@
 
 <div>
 
-<canvas id="mrcanvas" >
+<canvas id="mrcanvas">
 
 </canvas>
 
@@ -19,33 +19,52 @@
 //camelCase is local
 //no actual scoping because yolo
 
-//rendering shit
+//rendering and event handling be here
+
+//some magic numbers, "immutable" rofl
+var TOPLEFT = { x: 0, y: 0 };
+var TOPRIGHT = { x: 690, y: 0 };
+var BOTTOMLEFT = { x: 0, y: 420 };
+var BOTTOMRIGHT = { x: 690, y: 420 };
 
 var c=document.getElementById("mrcanvas");
+c.width = 690;
+c.height = 420;
+
+var MouseDown = function(e) {
+	SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
+}
+
+c.addEventListener("mousedown", MouseDown, false);
 var Ctx=c.getContext("2d");
-//ctx.fillStyle="#FF0000";
-//ctx.fillRect(xpos,ypos,width,height);
+//ctx.strokeStyle="#FF0000";
+//ctx.strokeStyle(xpos,ypos,width,height);
 //ctx.drawLine(x1, y1, x2, y2);
+Ctx.lineWidth = 1;
 
 var DrawTriangle = function(triangle, highlight) {
 	if(highlight) {
-		ctx.fillStyle="#FF0000";
+		Ctx.strokeStyle="#FF0000";
 	} else {
-		ctx.fillStyle="#00FF00";
+		Ctx.strokeStyle="#0000FF";
 	}
-	for(var i = 0; i < 3; i++) {
+	for (var i = 0; i < 3; i++) {
 		var j = (i + 1) % 3;
 		var x1 = triangle.vertices[i].x;
 		var y1 = triangle.vertices[i].y;
 		var x2 = triangle.vertices[j].x;
 		var y2 = triangle.vertices[j].y;
-		ctx.drawLine(x1, y1, x2, y2);
+		Ctx.beginPath();
+		Ctx.moveTo(x1, y1);
+		Ctx.lineTo(x2, y2);
+		Ctx.closePath();
+		Ctx.stroke();
 	}
 }
 
-var DrawAllTriangles = function() { 
+var DrawTriangles = function() { 
 	for(var i = 0; i < Triangles.length; i++) {
-		DrawTriangle(Triangle[i]);
+		DrawTriangle(Triangles[i]);
 	}
 }
 
@@ -53,40 +72,94 @@ var DrawAllTriangles = function() {
 
 <script type="text/javascript">
 
-//some magic numbers, "immutable" rofl
-var TOPLEFT = { x = 0, y = 0 };
-var TOPRIGHT = { x = 690, y = 0 };
-var BOTTOMLEFT = { x = 0, y = 420 };
-var BOTTOMRIGHT = { x = 690, y = 420 };
-
-
 //triangle array
 var Triangles = [];
 
-//initialize first triangles
-//prototyping is for scrubs
-var MakeTriangle = function(x1, y1, x2, y2, x3, y3) {
-	var triangle = { 
-		vertices = [
-		{ x = x1, y = y1},
-		{ x = x2, y = y2},
-		{ x = x3, y = y3},
-		];
-	};
-	return triangle;
+//triangle object 
+var Triangle = function(x1, y1, x2, y2, x3, y3) {
+	this.vertices = [
+		{ x: x1, y: y1},
+		{ x: x2, y: y2},
+		{ x: x3, y: y3}
+	];
+}
+//v for vertexxa
+Triangle.prototype.IsVertexInside = function(v) {
+	var a = this.vertices[0];
+	var b = this.vertices[1];
+	var c = this.vertices[2];
+	
+	var av_x = v.x - a.x;
+	var av_y = v.y - a.y;
+
+	var v_ab = (b.x - a.x) * av_y - (b.y - a.y) * av_x > 0;
+
+	if((c.x - a.x) * av_y - (c.y - a.y) * av_x > 0 == v_ab) return false;
+
+	if((c.x - b.x) * (v.y - b.y) - (c.y - b.y) * (v.x - b.x) > 0 != v_ab) return false;
+
+	return true;
+}
+//v for vertex, r for radius
+Triangle.prototype.HasPointInCircle = function(v, r) {
+	var one = vertices[0];
+	var two = vertices[1];
+	var three = vertices[2];
+	
+	
+	
 }
 
-Triangles.push(MakeTriangle(TOPLEFT.x, TOPLEFT.y, TOPRIGHT.x, TOPRIGHT.y, BOTTOMLEFT.x, BOTTOMLEFT.y));
-Triangles.push(MakeTriangle(BOTTOMRIGHT.x, BOTTOMRIGHT.y, TOPRIGHT.x, TOPRIGHT.y, BOTTOMLEFT.x, BOTTOMLEFT.y));
+//fun static methods because organisation is for scurbs
+
+//determines if candidate is to the left of line where line is vertex a -> b
+var IsLeft = function(line, candidate) {
+
+}
+
+var SelectTriangle = function(x, y) {
+	DrawTriangles();
+	var vertex = {
+		x: x,
+		y: y
+	}
+	for(var i = 0; i < Triangles.length; i++) {
+		if(Triangles[i].IsVertexInside(vertex)) {
+			DrawTriangle(Triangles[i], true);
+		}
+	}
+}
 
 
+
+
+
+
+
+
+
+
+
+</script>
+
+<script type="text/javascript">
+
+//init rubbish
+window.onload = function() {
+
+Triangles.push(new Triangle(TOPLEFT.x, TOPLEFT.y, TOPRIGHT.x, TOPRIGHT.y, BOTTOMLEFT.x, BOTTOMLEFT.y));
+Triangles.push(new Triangle(BOTTOMRIGHT.x, BOTTOMRIGHT.y, TOPRIGHT.x, TOPRIGHT.y, BOTTOMLEFT.x, BOTTOMLEFT.y));
+
+DrawTriangles();
+
+}
 
 </script>
 
 <style type="text/css">
 
 #mrcanvas {
-	width: 690px;
+	width: 690px;;
 	height: 420px;
 }
 
