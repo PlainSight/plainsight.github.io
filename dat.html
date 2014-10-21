@@ -52,6 +52,7 @@ var MouseDown = function(e) {
 	if(e.button === 2) {
 		var vertex = { x: e.x - c.offsetLeft, y: e.y - c.offsetTop};
 		GetTriangle(vertex).AddVertex(vertex);
+		DrawTriangles();
 	}
 }
 
@@ -170,7 +171,6 @@ Triangle.prototype.ShareTwoPoints = function(other) {
 			}
 		}
 	}
-	
 	return 2 == count;
 }
 //Adds a vertex to the current triangle. this kills the current triangle
@@ -215,6 +215,19 @@ Triangle.prototype.AddVertex = function(vertex) {
 	
 	return [ t1, t2, t3 ];
 }
+//Gets the vertices shared between the two triangles
+Triangle.prototype.SharedVertices = function(other) {
+	var shared = [];
+	var numfound = 0;
+	for(int i = 0; i < 3; i++) {
+		for(int j = 0; j < 3; j++) {
+			if(this.vertices[i].x == other.vertices[j].x && this.vertices[i].y == other.vertices[j].y) {
+				shared[numfound++] = this.vertices[i];
+			}
+		}
+	}
+	return shared;
+}
 
 
 //fun static methods because organisation is for scrubs
@@ -232,94 +245,104 @@ var GetTriangle = function(vertex) {
 	}
 	return null;
 }
-/*
+
 var Flip = function(t1, t2) {
-	Vertex[] common = t1.sharedVertices(t2);
+	var common = t1.SharedVertices(t2);
 	
-	Vertex[] uncommon = new Vertex[2];
-	uncommon[0] = t1.uniqueVertex(t2);
-	uncommon[1] = t2.uniqueVertex(t1);
+	var uncommon = [];
+	uncommon[0] = t1.UniqueVertex(t2);
+	uncommon[1] = t2.UniqueVertex(t1);
 	
 	//make new triangles
-	Triangle t1n = new Triangle(new Vertex[] { uncommon[0], uncommon[1], common[0] });
-	Triangle t2n = new Triangle(new Vertex[] { uncommon[0], uncommon[1], common[1] });
+	var t1n = new Triangle(uncommon[0], uncommon[1], common[0]);
+	var t2n = new Triangle(uncommon[0], uncommon[1], common[1]);
 	
-	ArrayList<Triangle> adjacents = new ArrayList<Triangle>();
-	adjacents.addAll(t1.adjacent);
-	adjacents.addAll(t2.adjacent);
+	var adjacents = [];
+	
+	for(var i = 0; i < t1.adjacent.length; i++) [
+		adjacents.push(t1.adjacent[i];
+	}
+	for(var i = 0; i < t2.adjacent.length; i++) [
+		adjacents.push(t2.adjacent[i];
+	}
 	adjacents.remove(t1);
 	adjacents.remove(t2);
 	
 	//remove old triangles from their neighbours adjacent lists
-	
-	for(Triangle t : t1.adjacent) {
+	for(var i = 0; i < t1.adjacent.length; i++) {
+		var t = t1.adjacent[i];
 		t.adjacent.remove(t1);
 	}
 	
-	for(Triangle t : t2.adjacent) {
+	for(var i = 0; i < t2.adjacent.length; i++) {
+		var t = t2.adjacent[i];
 		t.adjacent.remove(t2);
 	}
 	
-	for(Triangle t : adjacents) {
-		
-		if(t1n.share2points(t)) {
-			t.adjacent.add(t1n);
-			t1n.adjacent.add(t);
+	for(var i = 0; i < adjacents.length; i++) {
+		var t = adjacents[i];
+		if(t1n.ShareTwoPoints(t)) {
+			t.adjacent.push(t1n);
+			t1n.adjacent.push(t);
 		}
 		
-		if(t2n.share2points(t)) {
-			t.adjacent.add(t2n);
-			t2n.adjacent.add(t);
+		if(t2n.ShareTwoPoints(t)) {
+			t.adjacent.push(t2n);
+			t2n.adjacent.push(t);
 		}	
 	}
 	
-	t1n.adjacent.add(t2n);
-	t2n.adjacent.add(t1n);
-	
-	if(t1n.adjacent.size() > 3) {
-	
-		ArrayList<Triangle> twoadj = new ArrayList<Triangle>();
+	t1n.adjacent.push(t2n);
+	t2n.adjacent.push(t1n);
 		
-		for(Triangle t : triangles) {
-			
-			if(t.adjacent.size() < 3) {
-				twoadj.add(t);
-			}
-		}
-
-		throw new ArrayIndexOutOfBoundsException(t1n.adjacent.size());
-	}
-	if(t2n.adjacent.size() > 3) {
-		engine.ProduceErrorAppearance();
-		
-		ArrayList<Triangle> twoadj = new ArrayList<Triangle>();
-		
-		for(Triangle t : triangles) {
-			
-			if(t.adjacent.size() < 3) {
-				twoadj.add(t);
-			}
-		}
-		
-		throw new ArrayIndexOutOfBoundsException(t2n.adjacent.size());
-	}
-	
 	Triangles.remove(t1);
 	t1.dead = true;
 	Triangles.remove(t2);
 	t2.dead = true;
-	AddTriangle(t1n);
-	AddTriangle(t2n);
+	Triangles.push(t1n);
+	Triangles.push(t2n);
 			
 	return [ t1n, t2n ];
-}*/
+}
 
+var AddVertex = function(vertex) [
+	var inside = null;
+	var edge = null;
 
-
-
-
-
-
+	for(var i = 0; i < Triangles.length; i++) {
+		var t = Triangles[i];
+		if(t.IsVertexInside(vertex)) {
+			inside = t;
+		}
+		/*
+		if(t.IsVertexOnEdge(vertex)) {
+			edge = t;
+		}
+		*/
+		if(edge != null || inside != null) {
+			break;
+		}
+	}
+	/*
+	if(edge != null) {
+		var newTriangles = edge.addVertexToEdge(v);
+		for(var i = 0; i < newTriangles.length; i++) {
+			if(!newTriangles[i].dead) {
+				CheckAndFlip(newTriangles[i]);
+			}
+		}
+		return;
+	}
+	*/
+	if(inside != null) {
+		var newTriangles = inside.add(v);
+		for(var i = 0; i < newTriangles.length; i++) {
+			if(!newTriangles[i].dead) {
+				CheckAndFlip(newTriangles[i]);
+			}
+		}
+	}
+}
 
 
 //interactive bs
