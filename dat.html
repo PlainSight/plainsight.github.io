@@ -45,13 +45,12 @@ c.oncontextmenu = function (e) {
 };
 
 var MouseDown = function(e) {
-	console.log(e);
 	if(e.button === 0) {
 		SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
 	}
 	if(e.button === 2) {
 		var vertex = { x: e.x - c.offsetLeft, y: e.y - c.offsetTop};
-		GetTriangle(vertex).AddVertex(vertex);
+		AddVertex(vertex);
 		DrawTriangles();
 	}
 }
@@ -84,6 +83,8 @@ var DrawTriangle = function(triangle, highlight) {
 }
 
 var DrawTriangles = function() { 
+	console.log(Triangles.length);
+		Ctx.clearRect(0, 0, c.width, c.height);
 	for(var i = 0; i < Triangles.length; i++) {
 		DrawTriangle(Triangles[i]);
 	}
@@ -120,10 +121,12 @@ Triangle.prototype.IsVertexInside = function(v) {
 	return true;
 }
 //v for vertex, r for radius
-Triangle.prototype.HasPointInCircle = function(v, r) {
-	var one = vertices[0];
-	var two = vertices[1];
-	var three = vertices[2];
+Triangle.prototype.HasPointInCircle = function(triangle) {
+	var p = triangle.UniqueVertex(this);
+
+	var one = this.vertices[0];
+	var two = this.vertices[1];
+	var three = this.vertices[2];
 	
 	//arange points counter clockwise because reasons
 	if(!IsLeft([ three, one ], two)) {
@@ -134,15 +137,15 @@ Triangle.prototype.HasPointInCircle = function(v, r) {
 	
 	var a = one.x - p.x;
 	var b = one.y - p.y;
-	var c = (one.x*one.x - p.x*p.x) + (one.y*one.y - p.y*p.y);
+	var c = (one.x * one.x - p.x * p.x) + (one.y * one.y - p.y * p.y);
 	var d = two.x - p.x;
 	var e = two.y - p.y;
-	var f = (two.x*two.x - p.x*p.x) + (two.y*two.y - p.y*p.y);
+	var f = (two.x * two.x - p.x * p.x) + (two.y * two.y - p.y * p.y);
 	var g = three.x - p.x;
 	var h = three.y - p.y;
-	var i = (three.x*three.x - p.x*p.x) + (three.y*three.y - p.y*p.y);
+	var i = (three.x * three.x - p.x * p.x) + (three.y * three.y - p.y * p.y);
 	
-	var det = (a*(e*i - f*h)) - (b*(d*i - f*g)) + (c*(d*h - e*g));
+	var det = (a * (e * i - f * h)) - (b * (d * i - f * g)) + (c * (d * h - e * g));
 	
 	return det > 0;
 }
@@ -219,8 +222,8 @@ Triangle.prototype.AddVertex = function(vertex) {
 Triangle.prototype.SharedVertices = function(other) {
 	var shared = [];
 	var numfound = 0;
-	for(int i = 0; i < 3; i++) {
-		for(int j = 0; j < 3; j++) {
+	for(var i = 0; i < 3; i++) {
+		for(var j = 0; j < 3; j++) {
 			if(this.vertices[i].x == other.vertices[j].x && this.vertices[i].y == other.vertices[j].y) {
 				shared[numfound++] = this.vertices[i];
 			}
@@ -259,11 +262,11 @@ var Flip = function(t1, t2) {
 	
 	var adjacents = [];
 	
-	for(var i = 0; i < t1.adjacent.length; i++) [
-		adjacents.push(t1.adjacent[i];
+	for(var i = 0; i < t1.adjacent.length; i++) {
+		adjacents.push(t1.adjacent[i]);
 	}
-	for(var i = 0; i < t2.adjacent.length; i++) [
-		adjacents.push(t2.adjacent[i];
+	for(var i = 0; i < t2.adjacent.length; i++) {
+		adjacents.push(t2.adjacent[i]);
 	}
 	adjacents.remove(t1);
 	adjacents.remove(t2);
@@ -305,7 +308,7 @@ var Flip = function(t1, t2) {
 	return [ t1n, t2n ];
 }
 
-var AddVertex = function(vertex) [
+var AddVertex = function(vertex) {
 	var inside = null;
 	var edge = null;
 
@@ -335,7 +338,8 @@ var AddVertex = function(vertex) [
 	}
 	*/
 	if(inside != null) {
-		var newTriangles = inside.add(v);
+		var newTriangles = inside.AddVertex(vertex);
+		console.log(newTriangles);
 		for(var i = 0; i < newTriangles.length; i++) {
 			if(!newTriangles[i].dead) {
 				CheckAndFlip(newTriangles[i]);
@@ -344,6 +348,21 @@ var AddVertex = function(vertex) [
 	}
 }
 
+var CheckAndFlip = function(t) {
+			
+	for(var i = 0; i < t.adjacent.length; i++) {
+		var tt = t.adjacent[i];
+					
+		if(t.HasPointInCircle(tt)) {
+			var newTriangles = Flip(t, tt);
+			CheckAndFlip(newTriangles[0]);
+			if(!newTriangles[1].dead) {
+				CheckAndFlip(newTriangles[1]);
+			}
+			return;
+		}
+	}
+}
 
 //interactive bs
 
@@ -370,7 +389,6 @@ t1.adjacent.push(t2);
 t2.adjacent.push(t1);
 Triangles.push(t1);
 Triangles.push(t2);
-
 
 DrawTriangles();
 
