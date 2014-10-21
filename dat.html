@@ -19,6 +19,16 @@
 //camelCase is local
 //no actual scoping because yolo
 
+Array.prototype.remove = function(val) {
+    for (var i = 0; i < this.length; i++) {
+        if (this[i] === val) {
+            this.splice(i, 1);
+            i--;
+        }
+    }
+    return this;
+}
+
 //rendering and event handling be here
 
 //some magic numbers, "immutable" rofl
@@ -30,9 +40,19 @@ var BOTTOMRIGHT = { x: 690, y: 420 };
 var c=document.getElementById("mrcanvas");
 c.width = 690;
 c.height = 420;
+c.oncontextmenu = function (e) {
+    e.preventDefault();
+};
 
 var MouseDown = function(e) {
-	SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
+	console.log(e);
+	if(e.button === 0) {
+		SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
+	}
+	if(e.button === 2) {
+		var vertex = { x: e.x - c.offsetLeft, y: e.y - c.offsetTop};
+		GetTriangle(vertex).AddVertex(vertex);
+	}
 }
 
 c.addEventListener("mousedown", MouseDown, false);
@@ -159,20 +179,20 @@ Triangle.prototype.AddVertex = function(vertex) {
 
 	var t1 = new Triangle(this.vertices[0], this.vertices[1], vertex);
 	var t2 = new Triangle(this.vertices[1], this.vertices[2], vertex);
-	var t3 = new Triangle(this.vertices[0], vertices[2], vertex);
+	var t3 = new Triangle(this.vertices[0], this.vertices[2], vertex);
 
 	for(var i = 0; i < this.adjacent.length; i++) {
 		var t = this.adjacent[i];
 		t.adjacent.remove(this);
-		if(t1.share2points(t)) {
+		if(t1.ShareTwoPoints(t)) {
 			t.adjacent.push(t1);
 			t1.adjacent.push(t);
 		}
-		if(t2.share2points(t)) {
+		if(t2.ShareTwoPoints(t)) {
 			t.adjacent.push(t2);
 			t2.adjacent.push(t);
 		}
-		if(t3.share2points(t)) {
+		if(t3.ShareTwoPoints(t)) {
 			t.adjacent.push(t3);
 			t3.adjacent.push(t);
 		}
@@ -212,7 +232,7 @@ var GetTriangle = function(vertex) {
 	}
 	return null;
 }
-
+/*
 var Flip = function(t1, t2) {
 	Vertex[] common = t1.sharedVertices(t2);
 	
@@ -292,7 +312,7 @@ var Flip = function(t1, t2) {
 	AddTriangle(t2n);
 			
 	return [ t1n, t2n ];
-}
+}*/
 
 
 
