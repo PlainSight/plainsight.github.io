@@ -45,9 +45,15 @@ c.oncontextmenu = function (e) {
 };
 
 var MouseDown = function(e) {
+	//left click
 	if(e.button === 0) {
 		SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
 	}
+	//middle click
+	if(e.button === 1) {
+		TogglePathablity(e.x - c.offsetLeft, e.y - c.offsetTop);
+	}
+	//right click
 	if(e.button === 2) {
 		var vertex = { x: e.x - c.offsetLeft, y: e.y - c.offsetTop};
 		AddVertex(vertex);
@@ -68,18 +74,24 @@ var DrawTriangle = function(triangle, highlight) {
 	} else {
 		Ctx.strokeStyle="#0000FF";
 	}
+	Ctx.beginPath();
 	for (var i = 0; i < 3; i++) {
 		var j = (i + 1) % 3;
 		var x1 = triangle.vertices[i].x;
 		var y1 = triangle.vertices[i].y;
 		var x2 = triangle.vertices[j].x;
 		var y2 = triangle.vertices[j].y;
-		Ctx.beginPath();
-		Ctx.moveTo(x1, y1);
+		if(i === 0) {
+			Ctx.moveTo(x1, y1);
+		}
 		Ctx.lineTo(x2, y2);
-		Ctx.closePath();
-		Ctx.stroke();
 	}
+	Ctx.closePath();
+	if(!triangle.pathable) {
+		Ctx.fillStyle = "#0000FF";
+		Ctx.fill();
+	}
+	Ctx.stroke();
 }
 
 var DrawTriangles = function() { 
@@ -102,6 +114,7 @@ var Triangle = function(v1, v2, v3) {
 	this.vertices = [ v1, v2, v3 ];
 	this.adjacent = [];
 	this.dead = false;
+	this.pathable = true;
 }
 //v for vertexxa
 Triangle.prototype.IsVertexInside = function(v) {
@@ -374,6 +387,16 @@ var SelectTriangle = function(x, y) {
 	}
 	var triangle = GetTriangle(vertex);
 	DrawTriangle(triangle, true);
+}
+
+var TogglePathablity = function(x, y) {
+	var vertex = {
+		x: x,
+		y: y
+	}
+	var triangle = GetTriangle(vertex);
+	triangle.pathable = !triangle.pathable;
+	DrawTriangles();
 }
 
 </script>
