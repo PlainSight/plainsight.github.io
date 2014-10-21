@@ -51,7 +51,7 @@ var MouseDown = function(e) {
 	}
 	//middle click
 	if(e.button === 1) {
-		TogglePathablity(e.x - c.offsetLeft, e.y - c.offsetTop);
+		TogglePathability(e.x - c.offsetLeft, e.y - c.offsetTop);
 	}
 	//right click
 	if(e.button === 2) {
@@ -389,13 +389,43 @@ var SelectTriangle = function(x, y) {
 	DrawTriangle(triangle, true);
 }
 
-var TogglePathablity = function(x, y) {
+var TogglePathability = function(x, y) {
 	var vertex = {
 		x: x,
 		y: y
 	}
 	var triangle = GetTriangle(vertex);
-	triangle.pathable = !triangle.pathable;
+	if(triangle !== null) {		
+		triangle.pathable = !triangle.pathable;
+		DrawTriangles();
+	}
+}
+
+var Prepared = function() {
+	Initialize();
+	
+	var data = [
+		{ x: 100, y: 400},
+		{ x: 350, y: 200},
+		{ x: 120, y: 50},
+		{ x: 600, y: 300},
+		{ x: 500, y: 300}
+	];
+	
+	for(var i = 0; i < data.length; i++) {
+		AddVertex(data[i]);
+	}
+	
+	var pathability = [
+		{ x: 130, y: 410},
+		{ x: 350, y: 250},
+		{ x: 120, y: 55}
+	];
+	
+	for(var i = 0; i < pathability.length; i++) {
+		TogglePathability(pathability[i].x, pathability[i].y);
+	}
+	
 	DrawTriangles();
 }
 
@@ -404,7 +434,9 @@ var TogglePathablity = function(x, y) {
 <script type="text/javascript">
 
 //init rubbish
-window.onload = function() {
+var Initialize = function() {
+
+Triangles = [];
 
 var t1 = new Triangle(TOPLEFT, TOPRIGHT, BOTTOMLEFT);
 var t2 = new Triangle(BOTTOMRIGHT, TOPRIGHT, BOTTOMLEFT);
@@ -415,6 +447,10 @@ Triangles.push(t2);
 
 DrawTriangles();
 
+}
+
+window.onload = function() {
+	Initialize();
 }
 
 </script>
