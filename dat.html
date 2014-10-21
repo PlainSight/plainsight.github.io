@@ -12,6 +12,15 @@
 
 </div>
 
+<div>
+<h4>
+Intructerinos
+</h4>
+<p>
+	Left click select a triangle, middle click toggles pathability, right click adds a vertex to the graph 
+<p>
+</div>
+
 <script type="text/javascript">
 
 //magic javascript conventions
@@ -47,6 +56,7 @@ c.oncontextmenu = function (e) {
 var MouseDown = function(e) {
 	//left click
 	if(e.button === 0) {
+		console.log(e.x - c.offsetLeft, e.y - c.offsetTop);
 		SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
 	}
 	//middle click
@@ -95,7 +105,6 @@ var DrawTriangle = function(triangle, highlight) {
 }
 
 var DrawTriangles = function() { 
-	console.log(Triangles.length);
 		Ctx.clearRect(0, 0, c.width, c.height);
 	for(var i = 0; i < Triangles.length; i++) {
 		DrawTriangle(Triangles[i]);
@@ -352,7 +361,6 @@ var AddVertex = function(vertex) {
 	*/
 	if(inside != null) {
 		var newTriangles = inside.AddVertex(vertex);
-		console.log(newTriangles);
 		for(var i = 0; i < newTriangles.length; i++) {
 			if(!newTriangles[i].dead) {
 				CheckAndFlip(newTriangles[i]);
@@ -405,11 +413,51 @@ var Prepared = function() {
 	Initialize();
 	
 	var data = [
-		{ x: 100, y: 400},
-		{ x: 350, y: 200},
-		{ x: 120, y: 50},
-		{ x: 600, y: 300},
-		{ x: 500, y: 300}
+		{ x: 87, y: 147 },
+		{ x: 104, y: 203 },
+		{ x: 137, y: 220 },
+		{ x: 98, y: 271 },
+		{ x: 166, y: 380 },
+		{ x: 182, y: 330 },
+		{ x: 186, y: 349 },
+		{ x: 304, y: 375 },
+		{ x: 265, y: 305 },
+		{ x: 320, y: 336 },
+		{ x: 206, y: 290 },
+		{ x: 203, y: 245 },
+		{ x: 262, y: 213 },
+		{ x: 157, y: 191 },
+		{ x: 173, y: 172 },
+		{ x: 172, y: 130 },
+		{ x: 101, y: 108 },
+		{ x: 210, y: 54 },
+		{ x: 275, y: 36 },
+		{ x: 260, y: 99 },
+		{ x: 311, y: 124 },
+		{ x: 369, y: 107 },
+		{ x: 388, y: 42 },
+		{ x: 419, y: 84 },
+		{ x: 477, y: 41 },
+		{ x: 518, y: 65 },
+		{ x: 519, y: 266 },
+		{ x: 541, y: 200 },
+		{ x: 546, y: 238 },
+		{ x: 575, y: 282 },
+		{ x: 609, y: 246 },
+		{ x: 629, y: 189 },
+		{ x: 548, y: 157 },
+		{ x: 620, y: 125 },
+		{ x: 533, y: 110 },
+		{ x: 616, y: 54 },
+		{ x: 655, y: 255 },
+		{ x: 619, y: 328 },
+		{ x: 547, y: 349 },
+		{ x: 449, y: 306 },
+		{ x: 447, y: 255 },
+		{ x: 457, y: 191 },
+		{ x: 444, y: 151 },
+		{ x: 409, y: 292 },
+		{ x: 369, y: 187 }
 	];
 	
 	for(var i = 0; i < data.length; i++) {
@@ -417,9 +465,54 @@ var Prepared = function() {
 	}
 	
 	var pathability = [
-		{ x: 130, y: 410},
-		{ x: 350, y: 250},
-		{ x: 120, y: 55}
+		{ x: 128, y: 126 },
+		{ x: 101, y: 155 },
+		{ x: 143, y: 150 },
+		{ x: 117, y: 185 },
+		{ x: 130, y: 206 },
+		{ x: 112, y: 224 },
+		{ x: 145, y: 241 },
+		{ x: 189, y: 247 },
+		{ x: 158, y: 305 },
+		{ x: 166, y: 337 },
+		{ x: 199, y: 361 },
+		{ x: 231, y: 342 },
+		{ x: 209, y: 309 },
+		{ x: 296, y: 333 },
+		{ x: 277, y: 157 },
+		{ x: 247, y: 61 },
+		{ x: 291, y: 80 },
+		{ x: 323, y: 76 },
+		{ x: 350, y: 61 },
+		{ x: 409, y: 61 },
+		{ x: 478, y: 58 },
+		{ x: 493, y: 84 },
+		{ x: 492, y: 119 },
+		{ x: 402, y: 130 },
+		{ x: 413, y: 103 },
+		{ x: 436, y: 170 },
+		{ x: 422, y: 201 },
+		{ x: 472, y: 232 },
+		{ x: 423, y: 260 },
+		{ x: 456, y: 274 },
+		{ x: 495, y: 300 },
+		{ x: 560, y: 318 },
+		{ x: 550, y: 286 },
+		{ x: 549, y: 252 },
+		{ x: 599, y: 280 },
+		{ x: 567, y: 246 },
+		{ x: 630, y: 258 },
+		{ x: 573, y: 228 },
+		{ x: 640, y: 232 },
+		{ x: 576, y: 212 },
+		{ x: 569, y: 181 },
+		{ x: 645, y: 204 },
+		{ x: 610, y: 164 },
+		{ x: 633, y: 85 },
+		{ x: 193, y: 332 },
+		{ x: 182, y: 349 },
+		{ x: 400, y: 78 },
+		{ x: 634, y: 128 }
 	];
 	
 	for(var i = 0; i < pathability.length; i++) {
