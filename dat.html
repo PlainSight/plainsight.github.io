@@ -59,16 +59,16 @@ var MouseDown = function(e) {
 
 	//left click
 	if(e.button === 0) {
-		console.log(e.x - c.offsetLeft, e.y - c.offsetTop);
-		SelectTriangle(e.x - c.offsetLeft, e.y - c.offsetTop);
+		console.log(x - c.offsetLeft, y - c.offsetTop);
+		SelectTriangle(x - c.offsetLeft, y - c.offsetTop);
 	}
 	//middle click
 	if(e.button === 1) {
-		TogglePathability(e.x - c.offsetLeft, e.y - c.offsetTop);
+		TogglePathability(x - c.offsetLeft, y - c.offsetTop);
 	}
 	//right click
 	if(e.button === 2) {
-		var vertex = { x: e.x - c.offsetLeft, y: e.y - c.offsetTop};
+		var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
 		AddVertex(vertex);
 		DrawTriangles();
 	}
