@@ -84,6 +84,12 @@ Ctx.lineWidth = 2;
 var DrawTriangle = function(triangle, highlight) {
 	if(highlight) {
 		Ctx.strokeStyle="#FF0000";
+		//draw arc too
+		var circle = triangle.GetCircumcircle();
+		Ctx.beginPath();
+		Ctx.arc(circle.x, circle.y, circle.r, 0, 2 * Math.PI, false);
+		Ctx.stroke();
+		Ctx.closePath();
 	} else {
 		Ctx.strokeStyle="#0000FF";
 	}
@@ -255,6 +261,34 @@ Triangle.prototype.SharedVertices = function(other) {
 		}
 	}
 	return shared;
+}
+//Get circle centre and radius
+Triangle.prototype.GetCircumcircle = function() {
+	var ax = this.vertices[0].x;
+	var ax2 = ax * ax;
+	var ay = this.vertices[0].y;
+	var ay2 = ay * ay;
+	var bx = this.vertices[1].x;
+	var bx2 = bx * bx;
+	var by = this.vertices[1].y;
+	var by2 = by * by;
+	var cx = this.vertices[2].x;
+	var cx2 = cx * cx;
+	var cy = this.vertices[2].y;
+	var cy2 = cy * cy;
+
+	var d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+
+	var ux = ((ax2+ay2)*(by-cy)+(bx2+by2)*(cy-ay)+(cx2+cy2)*(ay-by)) / d;
+	var uy = ((ax2+ay2)*(cx-bx)+(bx2+by2)*(ax-cx)+(cx2+cy2)*(bx-ax)) / d;
+
+	var ur = Math.hypot(ux - ax, uy - ay);
+
+	return {
+		x: ux,
+		y: uy,
+		r: ur
+	};
 }
 
 
