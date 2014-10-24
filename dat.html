@@ -54,6 +54,9 @@ c.oncontextmenu = function (e) {
 };
 
 var MouseDown = function(e) {
+	var x = e.pageX;
+	var y = e.pageY;
+
 	//left click
 	if(e.button === 0) {
 		console.log(e.x - c.offsetLeft, e.y - c.offsetTop);
