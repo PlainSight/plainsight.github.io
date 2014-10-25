@@ -6,9 +6,16 @@ public class Triangle {
 	public Vertex[] vertices;
 	
 	public ArrayList<Triangle> adjacent = new ArrayList<Triangle>();
-
+	
+	public int lastPathVisit;
+	public long pathlength;
+	public long heuristic;
+	public long value;
+	public Triangle parent;
 	public boolean pathable = true;
-		
+	
+	public boolean dead = false;
+	
 	public Triangle(Vertex[] vs) {
 		vertices = vs;
 		pathable = !(vs[0].obstacle == vs[1].obstacle && vs[1].obstacle == vs[2].obstacle && vs[0].obstacle != null);
@@ -23,7 +30,115 @@ public class Triangle {
 		}
 		return false;
 	}
+	
+	public long getDistance(Vertex v) {
+		
+		long shortestDistance = Long.MAX_VALUE;
+		
+		Fraction vx = new Fraction(v.x);
+		Fraction vy = new Fraction(v.y);
+		
+		for(int i = 0; i < 3; i++) {
 			
+			int j = (i+1) % 3;
+			
+			if(vertices[j].x != vertices[i].x) {
+
+				Fraction ix = new Fraction(vertices[i].x);
+				Fraction iy = new Fraction(vertices[i].y);
+				
+				Fraction jx = new Fraction(vertices[j].x);
+				Fraction jy = new Fraction(vertices[j].y);
+				
+				Fraction m = new Fraction(vertices[j].y - vertices[i].y, vertices[j].x - vertices[i].x);
+							
+				Fraction x = vx;
+				
+				x = x.subtract(m.multiply(iy.subtract(vy)));
+				
+				x = x.add(ix.multiply(m).multiply(m));
+				
+				x = x.divide(new Fraction(1).add(m.multiply(m)));
+										
+				Fraction y;
+												
+				if(x.lessThan(jx) && x.lessThan(ix) || x.greaterThan(jx) && x.greaterThan(ix)) {
+					
+					if(v.distance2(vertices[i]) < v.distance2(vertices[j])) {
+						x = ix;
+						y = iy;
+					} else {
+						x = jx;
+						y = jy;
+					}
+					
+				} else {
+					y = iy.add(m.multiply(x.subtract(ix)));
+				}
+				
+				int tempdist = v.distance(new Vertex(x.toInt(), y.toInt()));
+				
+				if(tempdist < shortestDistance) {
+					shortestDistance = tempdist;
+				}
+				
+			} else {
+				
+				int y = v.y;
+				
+				int x = vertices[i].x;
+				
+				if(x < vertices[j].y && y < vertices[i].y || y > vertices[j].y && y > vertices[i].y) {
+					if(v.distance2(vertices[i]) < v.distance2(vertices[j])) {
+						x = vertices[i].x;
+						y = vertices[i].y;
+					} else {
+						x = vertices[j].x;
+						y = vertices[j].y;
+					}
+				}
+				
+				int tempdist = v.distance(new Vertex(x, y));
+				
+				if(tempdist < shortestDistance) {
+					shortestDistance = tempdist;
+				}
+			}
+		}
+		
+		return shortestDistance;
+	}
+	
+//	public double getShortestSideLength() {
+//		
+//		double shortestLength2 = Double.MAX_VALUE;
+//		
+//		for(int i = 0; i < 3; i++) {
+//			
+//			double tempLength = vertices[i].distance2(vertices[(i+1)%3]);
+//			
+//			if(tempLength < shortestLength2) {
+//				shortestLength2 = tempLength;
+//			}
+//		}
+//		
+//		
+//		return shortestLength2;
+//	}
+	
+//	public double getDistanceClosePoint(Triangle t) {
+//		
+//		double tx = (t.vertices[0].x + t.vertices[1].x + t.vertices[2].x) / 3;
+//		double ty = (t.vertices[0].y + t.vertices[1].y + t.vertices[2].y) / 3;
+//		
+//		Vertex closePoint = GetClosestPoint((int) tx, (int) ty);
+//		
+//		double x = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
+//		double y = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
+//		
+//		return Math.hypot(closePoint.x - x, closePoint.y - y);
+//	}
+		
 	public ArrayList<Triangle> getValidAdjacent() {
 		
 		ArrayList<Triangle> validAdjacent = new ArrayList<Triangle>();
@@ -75,6 +190,24 @@ public class Triangle {
 		}
 		
 		return null;
+	}
+	
+	boolean vertexInTriangle(Vertex v)
+	{
+		Vertex a = vertices[0];
+		Vertex b = vertices[1];
+		Vertex c = vertices[2];
+		
+	    int av_x = v.x-a.x;
+	    int av_y = v.y-a.y;
+
+	    boolean v_ab = (b.x-a.x)*av_y-(b.y-a.y)*av_x > 0;
+
+	    if((c.x-a.x)*av_y-(c.y-a.y)*av_x > 0 == v_ab) return false;
+
+	    if((c.x-b.x)*(v.y-b.y)-(c.y-b.y)*(v.x-b.x) > 0 != v_ab) return false;
+
+	    return true;
 	}
 	
 	boolean vertexOnTriangleEdge(Vertex v) {
@@ -207,7 +340,7 @@ public class Triangle {
 		return new Triangle[] { t1, t2, t3, t4 };
 	}
 	
-	Triangle[] (Vertex v) {
+	Triangle[] add(Vertex v) {
 		
 		Triangle t1 = new Triangle(new Vertex[] {vertices[0], vertices[1], v});
 		Triangle t2 = new Triangle(new Vertex[] {vertices[1], vertices[2], v});
