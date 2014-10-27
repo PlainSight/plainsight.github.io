@@ -53,13 +53,34 @@ c.oncontextmenu = function (e) {
     e.preventDefault();
 };
 
+var PathStartVertex;
+var PathEndVertex;
+
 var MouseDown = function(e) {
 	var x = e.pageX;
 	var y = e.pageY;
-
+	
+	//path
+	if(e.shiftKey) {
+		var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
+		//place start
+		if(e.button === 0) {
+			PathStartVertex = vertex;
+		}
+		//place end
+		if(e.button === 2) {
+			PathEndVertex = vertex;
+		}
+		
+		if(PathStartVertex != null && PathEndVertex != null) {
+			FindPath(PathStartVertex, PathEndVertex);
+		}
+		
+		return;
+	}
+	
 	//left click
 	if(e.button === 0) {
-		console.log(x - c.offsetLeft, y - c.offsetTop);
 		SelectTriangle(x - c.offsetLeft, y - c.offsetTop);
 	}
 	//middle click
@@ -81,7 +102,8 @@ var Ctx=c.getContext("2d");
 //ctx.drawLine(x1, y1, x2, y2);
 Ctx.lineWidth = 2;
 
-var DrawTriangle = function(triangle, highlight) {
+var DrawTriangle = function(triangle, highlight, pathnode) {
+	Ctx.strokeStyle="#0000FF";
 	if(highlight) {
 		Ctx.strokeStyle="#FF0000";
 		//draw arc too
@@ -90,8 +112,6 @@ var DrawTriangle = function(triangle, highlight) {
 		Ctx.arc(circle.x, circle.y, circle.r, 0, 2 * Math.PI, false);
 		Ctx.stroke();
 		Ctx.closePath();
-	} else {
-		Ctx.strokeStyle="#0000FF";
 	}
 	Ctx.beginPath();
 	for (var i = 0; i < 3; i++) {
@@ -106,11 +126,26 @@ var DrawTriangle = function(triangle, highlight) {
 		Ctx.lineTo(x2, y2);
 	}
 	Ctx.closePath();
-	if(!triangle.pathable) {
+	if(!triangle.pathNode.pathable) {
 		Ctx.fillStyle = "#0000FF";
 		Ctx.fill();
 	}
+	if(pathnode) {
+		Ctx.fillStyle = "#FFFF00";
+		Ctx.fill();
+	}
 	Ctx.stroke();
+}
+
+var DrawLines = function(path) {
+	Ctx.strokeStyle = "#FF6600";
+	Ctx.beginPath();
+	Ctx.moveTo(path[0].x, path[0].y);
+	for(var i = 1; i < path.length; i++) {
+		Ctx.lineTo(path[i].x, path[i].y);
+	}
+	Ctx.stroke();
+	Ctx.closePath();
 }
 
 var DrawTriangles = function() { 
@@ -118,6 +153,14 @@ var DrawTriangles = function() {
 	for(var i = 0; i < Triangles.length; i++) {
 		DrawTriangle(Triangles[i]);
 	}
+}
+
+var DrawPath = function(path) {
+	var triangles = path.map(function(pn) { return pn.triangle });
+	for(var i = 0; i < triangles.length; i++) {
+		DrawTriangle(triangles[i], false, true);
+	}
+	DrawLines(triangles.map(function(t) { return t.GetMiddle(); }));
 }
 
 </script>
@@ -132,7 +175,7 @@ var Triangle = function(v1, v2, v3) {
 	this.vertices = [ v1, v2, v3 ];
 	this.adjacent = [];
 	this.dead = false;
-	this.pathable = true;
+	this.pathNode = new PathNode(this);
 }
 //v for vertexxa
 Triangle.prototype.IsVertexInside = function(v) {
@@ -290,7 +333,116 @@ Triangle.prototype.GetCircumcircle = function() {
 		r: ur
 	};
 }
+//Get triangle midpoint
+Triangle.prototype.GetMiddle = function() {
+	var ax = this.vertices[0].x + this.vertices[1].x + this.vertices[2].x;
+	var ay = this.vertices[0].y + this.vertices[1].y + this.vertices[2].y;
+	
+	return { x: ax / 3, y: ay / 3 };
+}
 
+var PathNode = function(tri) {
+	this.triangle = tri;
+	this.pathable = true;
+	this.parent = null;
+	this.visited = false;
+	this.heuristic = 0;
+	this.pathlength = 0;
+	this.value = 0;
+}
+PathNode.prototype.TogglePathable = function() {
+	this.pathable = !this.pathable;
+}
+PathNode.prototype.GetAdjacent = function() {
+	return this.triangle.adjacent.map(function (tri) {
+		return tri.pathNode;
+	});
+}
+PathNode.prototype.GetDistance = function(other) {
+	var center = this.triangle.GetMiddle();
+	var targetcenter = other.triangle.GetMiddle();
+	return Math.hypot(center.x - targetcenter.x, center.y - targetcenter.y);
+}
+PathNode.prototype.Visit = function(parent, target) {
+	this.parent = parent;
+	this.visited = true;
+	this.pathlength = this.GetDistance(parent) + parent.pathlength;
+	this.heuristic = this.GetDistance(target);
+	this.value = this.pathlength + this.heuristic;
+}
+
+var Path = [];
+
+var FindPath = function(startVertex, endVertex) {
+	
+	Path = [];
+	
+	for(var i = 0; i < Triangles.length; i++) {
+		Triangles[i].pathNode.parent = null;
+		Triangles[i].pathNode.visited = false;
+		Triangles[i].pathNode.heuristic = 0;
+		Triangles[i].pathNode.pathlength = 0;
+		Triangles[i].pathNode.value = 0;
+	}
+	
+	var startNode = GetTriangle(startVertex).pathNode;
+	var endNode = GetTriangle(endVertex).pathNode;
+
+	var openSet = [];
+	
+	startNode.pathlength = 0;
+	startNode.heuristic = startNode.GetDistance(endNode);
+	startNode.value = startNode.heuristic;
+	startNode.visited = true;
+	
+	openSet.push(startNode);
+	
+	while(openSet.length != 0) {
+		
+		openSet.sort(function(a, b) { return b.value - a.value; });
+		
+		var nominated = openSet.pop();
+		
+		console.log(nominated);
+		
+		DrawTriangle(nominated.triangle, false, true);
+		
+		if(nominated === endNode) {
+			break;
+		}
+	
+		var adjacent = nominated.GetAdjacent();
+		
+		for(var i = 0; i < adjacent.length; i++) {
+			var current = adjacent[i];
+			
+			if(current.pathable) {
+				if(!current.visited) {
+					current.Visit(nominated, endNode);
+					openSet.push(current);
+				} else {
+					var newPathLength = nominated.pathlength + current.GetDistance(nominated);
+					
+					if(newPathLength < current.pathLength) {
+						current.Visit(nominated, endNode);
+					}
+				}
+			}
+		}
+	}
+	
+	//end node either has parent == null: no path, or parent == something: path exists
+	var currentNode = endNode;
+	while(currentNode != null) {
+		Path.push(currentNode);
+		currentNode = currentNode.parent;
+	}
+	
+	console.log(Path);
+	
+	DrawTriangles();
+	DrawPath(Path);
+}
 
 //fun static methods because organisation is for scrubs
 
@@ -441,7 +593,7 @@ var TogglePathability = function(x, y) {
 	}
 	var triangle = GetTriangle(vertex);
 	if(triangle !== null) {		
-		triangle.pathable = !triangle.pathable;
+		triangle.pathNode.TogglePathable();
 		DrawTriangles();
 	}
 }
