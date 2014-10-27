@@ -17,7 +17,16 @@
 Intructerinos
 </h4>
 <p>
-	Left click select a triangle, middle click toggles pathability, right click adds a vertex to the graph 
+	Left click selects a triangles - this will show you the bounds of the triangle and the circumcircle around the triangle
+<p>
+<p>
+	Right click adds a vertex to the graph
+<p>
+<p>
+	Shift + Left click denotes a start or end point for a path, after two triangles are clicked the path will be displayed
+<p>
+<p>
+	Shift + Right click toggles pathability of a triangle
 <p>
 </div>
 
@@ -53,8 +62,7 @@ c.oncontextmenu = function (e) {
     e.preventDefault();
 };
 
-var PathStartVertex;
-var PathEndVertex;
+var PathVertices = [];
 
 var MouseDown = function(e) {
 	var x = e.pageX;
@@ -65,15 +73,19 @@ var MouseDown = function(e) {
 		var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
 		//place start
 		if(e.button === 0) {
-			PathStartVertex = vertex;
+			if(PathVertices.length == 2) {
+				PathVertices.shift();
+			}
+			PathVertices.push(vertex);
+			
+			if(PathVertices.length == 2) {
+				FindPath(PathVertices[0], PathVertices[1]);
+				PathVertices = [];
+			}
 		}
 		//place end
 		if(e.button === 2) {
-			PathEndVertex = vertex;
-		}
-		
-		if(PathStartVertex != null && PathEndVertex != null) {
-			FindPath(PathStartVertex, PathEndVertex);
+			TogglePathability(x - c.offsetLeft, y - c.offsetTop);
 		}
 		
 		return;
@@ -85,7 +97,7 @@ var MouseDown = function(e) {
 	}
 	//middle click
 	if(e.button === 1) {
-		TogglePathability(x - c.offsetLeft, y - c.offsetTop);
+		
 	}
 	//right click
 	if(e.button === 2) {
