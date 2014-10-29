@@ -17,25 +17,17 @@
 Intructerinos
 </h4>
 <p>
-	Left click selects a triangles - this will show you the bounds of the triangle and the circumcircle around the triangle
+	Left click selects a triangles or move the path nodes
 <p>
 <p>
 	Right click adds a vertex to the graph
 <p>
 <p>
-	Shift + Left click denotes a start or end point for a path, after two triangles are clicked the path will be displayed
-<p>
-<p>
-	Shift + Right click toggles pathability of a triangle
+	Shift (or Control) + click toggles pathability of a triangle
 <p>
 </div>
 
 <script type="text/javascript">
-
-//magic javascript conventions
-//CapCase is global
-//camelCase is local
-//no actual scoping because yolo
 
 Array.prototype.remove = function(val) {
     for (var i = 0; i < this.length; i++) {
@@ -51,73 +43,93 @@ Array.prototype.remove = function(val) {
 
 //some magic numbers, "immutable" rofl
 var TOPLEFT = { x: 0, y: 0 };
-var TOPRIGHT = { x: 690, y: 0 };
-var BOTTOMLEFT = { x: 0, y: 420 };
-var BOTTOMRIGHT = { x: 690, y: 420 };
+var TOPRIGHT = { x: 800, y: 0 };
+var BOTTOMLEFT = { x: 0, y: 600 };
+var BOTTOMRIGHT = { x: 800, y: 600 };
+
+var LIGHTBLUE = '#169D5B';
+var DARKBLUE = '#513317';
+var LIGHTYELLOW = '#FFF176';
+var LIGHTRED = '#F01A24';
+var LIGHTORANGE = '#F15A23';
+var BLACK = '#181B19';
 
 var c=document.getElementById("mrcanvas");
-c.width = 690;
-c.height = 420;
+c.width = TOPRIGHT.x;
+c.height = BOTTOMLEFT.y;
 c.oncontextmenu = function (e) {
     e.preventDefault();
 };
 
-var PathVertices = [];
+var PathVertices = [ 
+{
+	x: TOPLEFT.x + 20,
+	y: TOPRIGHT.y + 20
+}, 
+{
+	x: BOTTOMRIGHT.x - 20,
+	y: BOTTOMRIGHT.y - 20
+}
+];
+
+var DraggingPathNode = null;
 
 var MouseDown = function(e) {
 	var x = e.pageX;
 	var y = e.pageY;
-	
+	var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
 	//path
-	if(e.shiftKey) {
-		var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
-		//place start
-		if(e.button === 0) {
-			if(PathVertices.length == 2) {
-				PathVertices.shift();
-			}
-			PathVertices.push(vertex);
-			
-			if(PathVertices.length == 2) {
-				FindPath(PathVertices[0], PathVertices[1]);
-				PathVertices = [];
-			}
-		}
-		//place end
-		if(e.button === 2) {
-			TogglePathability(x - c.offsetLeft, y - c.offsetTop);
-		}
-		
+	if(e.shiftKey || e.ctrlKey) {
+		TogglePathability(vertex);		
 		return;
 	}
 	
 	//left click
 	if(e.button === 0) {
-		SelectTriangle(x - c.offsetLeft, y - c.offsetTop);
+		var pathNode = GetPathNodeSelection(vertex);
+		if(pathNode != null) {
+			DraggingPathNode = pathNode;
+		} else {
+			SelectTriangle(vertex);
+		}
 	}
-	//middle click
-	if(e.button === 1) {
-		
-	}
+	
 	//right click
 	if(e.button === 2) {
-		var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
 		AddVertex(vertex);
 		DrawTriangles();
 	}
 }
 
+var MouseUp = function(e) {
+	if(DraggingPathNode != null) {
+		DraggingPathNode = null;
+		FindPath(PathVertices[0], PathVertices[1]);
+	}
+}
+
+var MouseMove = function(e) {
+	var x = e.pageX;
+	var y = e.pageY;
+	var vertex = { x: x - c.offsetLeft, y: y - c.offsetTop};
+	
+	if(DraggingPathNode != null) {
+		DraggingPathNode.x = vertex.x;
+		DraggingPathNode.y = vertex.y;
+		DrawTriangles();
+	}
+}
+
 c.addEventListener("mousedown", MouseDown, false);
+c.addEventListener("mousemove", MouseMove, false);
+c.addEventListener("mouseup", MouseUp, false);
 var Ctx=c.getContext("2d");
-//ctx.strokeStyle="#FF0000";
-//ctx.strokeStyle(xpos,ypos,width,height);
-//ctx.drawLine(x1, y1, x2, y2);
 Ctx.lineWidth = 2;
 
-var DrawTriangle = function(triangle, highlight, pathnode) {
-	Ctx.strokeStyle="#0000FF";
+var DrawTriangle = function(triangle, highlight, ispathnode) {
+	Ctx.strokeStyle = DARKBLUE;
 	if(highlight) {
-		Ctx.strokeStyle="#FF0000";
+		Ctx.strokeStyle= LIGHTRED;
 		//draw arc too
 		var circle = triangle.GetCircumcircle();
 		Ctx.beginPath();
@@ -139,18 +151,26 @@ var DrawTriangle = function(triangle, highlight, pathnode) {
 	}
 	Ctx.closePath();
 	if(!triangle.pathNode.pathable) {
-		Ctx.fillStyle = "#0000FF";
+		Ctx.fillStyle = LIGHTBLUE;
 		Ctx.fill();
 	}
-	if(pathnode) {
-		Ctx.fillStyle = "#FFFF00";
+	if(ispathnode) {
+		Ctx.fillStyle = LIGHTYELLOW;
 		Ctx.fill();
 	}
 	Ctx.stroke();
 }
 
+var DrawTriangles = function() { 
+	Ctx.clearRect(0, 0, c.width, c.height);
+	for(var i = 0; i < Triangles.length; i++) {
+		DrawTriangle(Triangles[i]);
+	}
+	DrawPathNodes();
+}
+
 var DrawLines = function(path) {
-	Ctx.strokeStyle = "#FF6600";
+	Ctx.strokeStyle = LIGHTORANGE;
 	Ctx.beginPath();
 	Ctx.moveTo(path[0].x, path[0].y);
 	for(var i = 1; i < path.length; i++) {
@@ -160,19 +180,35 @@ var DrawLines = function(path) {
 	Ctx.closePath();
 }
 
-var DrawTriangles = function() { 
-		Ctx.clearRect(0, 0, c.width, c.height);
-	for(var i = 0; i < Triangles.length; i++) {
-		DrawTriangle(Triangles[i]);
+var DrawPathNodes = function() {
+	for(var i = 0; i < 2; i++) {
+		Ctx.beginPath();
+		Ctx.strokeStyle = BLACK;
+		Ctx.fillStyle = DARKBLUE;
+		Ctx.arc(PathVertices[i].x, PathVertices[i].y, 10, 0, 2 * Math.PI, false);
+		Ctx.stroke();
+		Ctx.fill();
+		Ctx.closePath();
 	}
 }
 
 var DrawPath = function(path) {
-	var triangles = path.map(function(pn) { return pn.triangle });
-	for(var i = 0; i < triangles.length; i++) {
-		DrawTriangle(triangles[i], false, true);
+	if(path.length > 1) {
+		var triangles = path.map(function(pn) { return pn.triangle });
+		for(var i = 0; i < triangles.length; i++) {
+			DrawTriangle(triangles[i], false, true);
+		}
 	}
 	DrawLines(triangles.map(function(t) { return t.GetMiddle(); }));
+	DrawPathNodes();
+}
+
+var GetPathNodeSelection = function(vertex) {
+	for(var i = 0; i < 2; i++) {
+		if(Math.hypot(PathVertices[i].x - vertex.x, PathVertices[i].y - vertex.y) < 11) {
+			return PathVertices[i];
+		}
+	}
 }
 
 </script>
@@ -399,6 +435,11 @@ var FindPath = function(startVertex, endVertex) {
 	
 	var startNode = GetTriangle(startVertex).pathNode;
 	var endNode = GetTriangle(endVertex).pathNode;
+	
+	if(startNode.pathable == false || endNode.pathable == false) {
+		//return if either start or end are not pathable
+		return;
+	}
 
 	var openSet = [];
 	
@@ -588,21 +629,13 @@ var CheckAndFlip = function(t) {
 
 //interactive bs
 
-var SelectTriangle = function(x, y) {
+var SelectTriangle = function(vertex) {
 	DrawTriangles();
-	var vertex = {
-		x: x,
-		y: y
-	}
 	var triangle = GetTriangle(vertex);
 	DrawTriangle(triangle, true);
 }
 
-var TogglePathability = function(x, y) {
-	var vertex = {
-		x: x,
-		y: y
-	}
+var TogglePathability = function(vertex) {
 	var triangle = GetTriangle(vertex);
 	if(triangle !== null) {		
 		triangle.pathNode.TogglePathable();
@@ -752,8 +785,8 @@ window.onload = function() {
 <style type="text/css">
 
 #mrcanvas {
-	width: 690px;;
-	height: 420px;
+	width: 800px;;
+	height: 600px;
 }
 
 </style>
