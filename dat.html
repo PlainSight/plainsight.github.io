@@ -39,11 +39,9 @@ Array.prototype.remove = function(val) {
     return this;
 }
 
-if(!Math.hypot) {
-	Math.hypot = function(x, y) {
-		return Math.sqrt(x*x + y*y);
-	}
-}
+Math.hypot = Math.hypot || function(x, y) {
+  return Math.sqrt(x*x + y*y);
+};
 
 //magic constants
 var TOPLEFT = { x: 0, y: 0 };
