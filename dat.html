@@ -50,6 +50,7 @@ var BOTTOMLEFT = { x: 0, y: 600 };
 var BOTTOMRIGHT = { x: 800, y: 600 };
 
 //variable names no longer refer to color within
+var LIGHTLIGHTBLUE = '#87CEEB';
 var LIGHTBLUE = '#169D5B';
 var DARKBLUE = '#513317';
 var LIGHTYELLOW = '#FFF176';
@@ -109,6 +110,7 @@ var MouseDown = function(e) {
 var MouseUp = function(e) {
 	if(DraggingPathNode != null) {
 		DraggingPathNode = null;
+		DrawTriangles();
 		FindPath(PathVertices[0], PathVertices[1]);
 		FindGridPath(PathVertices[0], PathVertices[1]);
 	}
@@ -195,9 +197,19 @@ var DrawTriangles = function() {
 	DrawPathNodes();
 }
 
-var DrawGridSpaces = function() {
-	
+var DrawGridSpace = function(space, colour) {
+	Ctx.strokeStyle = colour;
+	Ctx.fillStyle = colour;
 
+	Ctx.beginPath();
+	Ctx.arc(space.vertex.x, space.vertex.y, 2, 0, 2 * Math.PI, false);
+	Ctx.stroke();
+	Ctx.fill();
+	Ctx.closePath();
+	
+	if(space.pathNode.parent != null) {
+		DrawLines([space.GetMiddle(), space.pathNode.parent.triangle.GetMiddle()], colour);
+	}
 }
 
 var SelectTriangle = function(vertex) {
@@ -249,6 +261,16 @@ var DrawGridPath = function(path) {
 	DrawPathNodes();
 }
 
+var DrawText = function(text, y) {
+	var x = 30;
+	Ctx.font = "bold 20px Arial";
+	Ctx.strokeStyle = 'black';
+	Ctx.lineWidth = 3;
+	Ctx.strokeText(text, x, y);
+	Ctx.fillStyle = 'white';
+	Ctx.fillText(text, x, y);
+}
+
 var GetPathNodeSelection = function(vertex) {
 	for(var i = 0; i < 2; i++) {
 		if(Math.hypot(PathVertices[i].x - vertex.x, PathVertices[i].y - vertex.y) < 11) {
@@ -273,6 +295,7 @@ var Triangle = function(v1, v2, v3) {
 }
 //v for vertexxa
 Triangle.prototype.IsVertexInside = function(v) {
+
 	var a = this.vertices[0];
 	var b = this.vertices[1];
 	var c = this.vertices[2];
@@ -280,11 +303,11 @@ Triangle.prototype.IsVertexInside = function(v) {
 	var av_x = v.x - a.x;
 	var av_y = v.y - a.y;
 
-	var v_ab = (b.x - a.x) * av_y - (b.y - a.y) * av_x > 0;
+	var v_ab = (b.x - a.x) * av_y - (b.y - a.y) * av_x >= 0;
 
 	if((c.x - a.x) * av_y - (c.y - a.y) * av_x > 0 == v_ab) return false;
 
-	if((c.x - b.x) * (v.y - b.y) - (c.y - b.y) * (v.x - b.x) > 0 != v_ab) return false;
+	if((c.x - b.x) * (v.y - b.y) - (c.y - b.y) * (v.x - b.x) >= 0 != v_ab) return false;
 
 	return true;
 }
@@ -484,6 +507,8 @@ PathNode.prototype.Visit = function(parent, target) {
 var GridSpaces = [];
 
 var BuildGrid = function() {
+	GridSpaces = [];
+
 	var startx = TOPLEFT.x + (GridStep/2);
 	var endx = TOPRIGHT.x - (GridStep/2);
 	var starty = TOPLEFT.y + (GridStep/2);
@@ -493,7 +518,11 @@ var BuildGrid = function() {
 		for(var y = starty; y <= endy; y += GridStep) {
 			var vertex = { x: x, y: y };
 			var newSpace = new GridSpace(vertex);
-			newSpace.pathNode.pathable = GetTriangle(vertex).pathNode.pathable;
+			var triangle = GetTriangle(vertex);
+			if(triangle == null) {
+				console.log(vertex);
+			}
+			newSpace.pathNode.pathable = triangle.pathNode.pathable;
 			GridSpaces[CoordinateToIndex(x, y)] = newSpace;
 		}
 	}
@@ -564,9 +593,8 @@ var FindGridPath = function(startVertex, endVertex) {
 					current.Visit(nominated, endNode);
 					openSet.push(current);
 				} else {
-					var newPathLength = nominated.pathlength + current.GetDistance(nominated);
-					
-					if(newPathLength < current.pathLength) {
+					var newPathLength = nominated.pathlength + nominated.GetDistance(current);
+					if(newPathLength < current.pathlength) {
 						current.Visit(nominated, endNode);
 					}
 				}
@@ -578,12 +606,12 @@ var FindGridPath = function(startVertex, endVertex) {
 	var currentNode = endNode;
 	while(currentNode != null) {
 		GridPath.push(currentNode);
+		//DrawGridSpace(currentNode.triangle, LIGHTRED);
 		currentNode = currentNode.parent;
 	}
-	
-	console.log("Grid - visited: " + visited + ", polled: " + polled);
-	
+		
 	DrawGridPath(GridPath);
+	DrawText("Grid - discovered: " + visited + ", polled: " + polled, 20);
 }
 
 var FindPath = function(startVertex, endVertex) {
@@ -631,7 +659,7 @@ var FindPath = function(startVertex, endVertex) {
 		}
 	
 		var adjacent = nominated.GetAdjacent();
-		
+
 		for(var i = 0; i < adjacent.length; i++) {
 			var current = adjacent[i];
 			
@@ -641,9 +669,10 @@ var FindPath = function(startVertex, endVertex) {
 					current.Visit(nominated, endNode);
 					openSet.push(current);
 				} else {
+					
 					var newPathLength = nominated.pathlength + current.GetDistance(nominated);
 					
-					if(newPathLength < current.pathLength) {
+					if(newPathLength < current.pathlength) {
 						current.Visit(nominated, endNode);
 					}
 				}
@@ -658,10 +687,8 @@ var FindPath = function(startVertex, endVertex) {
 		currentNode = currentNode.parent;
 	}
 	
-	console.log("Triangle - visited: " + visited + ", polled: " + polled);
-	
-	DrawTriangles();
 	DrawPath(Path);
+	DrawText("Triangle - discovered: " + visited + ", polled: " + polled, 50);
 }
 
 //fun static methods because organisation is for scrubs
@@ -756,26 +783,10 @@ var AddVertex = function(vertex) {
 		if(t.IsVertexInside(vertex)) {
 			inside = t;
 		}
-		/*
-		if(t.IsVertexOnEdge(vertex)) {
-			edge = t;
-		}
-		*/
 		if(edge != null || inside != null) {
 			break;
 		}
 	}
-	/*
-	if(edge != null) {
-		var newTriangles = edge.addVertexToEdge(v);
-		for(var i = 0; i < newTriangles.length; i++) {
-			if(!newTriangles[i].dead) {
-				CheckAndFlip(newTriangles[i]);
-			}
-		}
-		return;
-	}
-	*/
 	if(inside != null) {
 		var newTriangles = inside.AddVertex(vertex);
 		for(var i = 0; i < newTriangles.length; i++) {
