@@ -531,12 +531,26 @@ var BuildGrid = function() {
 		for(var y = starty; y <= endy; y+= GridStep) {
 			var space = GridSpaces[CoordinateToIndex(x, y)]
 			var adj = [];
+			var triangleOfSpace = GetTriangle({ x: x, y: y });
 			for(var xx = -1; xx < 2; xx++) {
 				for(var yy = -1; yy < 2; yy++) {
 					if(xx == 0 && yy == 0) continue;
-					var gridSpace = GridSpaces[CoordinateToIndex(space.vertex.x + (xx * GridStep), space.vertex.y + (yy * GridStep))];
+					var gridSpace = GridSpaces[CoordinateToIndex(x + (xx * GridStep), y + (yy * GridStep))];
 					if(gridSpace) {
-						adj.push(gridSpace);
+						var triangleOfAdjacent = GetTriangle({ x: x + (xx * GridStep), y: y + (yy * GridStep) });
+						var isAdj = false;
+						if(triangleOfAdjacent == triangleOfSpace) {
+							isAdj = true;
+						} else {
+							for(var i = 0; i < triangleOfAdjacent.adjacent.length; i++) {
+								if(triangleOfAdjacent.adjacent[i] == triangleOfSpace) {
+									isAdj = true;
+								}
+							}
+						}		
+						if(isAdj) {
+							adj.push(gridSpace);
+						}
 					}
 				}
 			}
