@@ -305,7 +305,7 @@ Triangle.prototype.IsVertexInside = function(v) {
 
 	var v_ab = (b.x - a.x) * av_y - (b.y - a.y) * av_x >= 0;
 
-	if((c.x - a.x) * av_y - (c.y - a.y) * av_x > 0 == v_ab) return false;
+	if((c.x - a.x) * av_y - (c.y - a.y) * av_x >= 0 == v_ab) return false;
 
 	if((c.x - b.x) * (v.y - b.y) - (c.y - b.y) * (v.x - b.x) >= 0 != v_ab) return false;
 
