@@ -303,11 +303,11 @@ Triangle.prototype.IsVertexInside = function(v) {
 	var av_x = v.x - a.x;
 	var av_y = v.y - a.y;
 
-	var v_ab = (b.x - a.x) * av_y - (b.y - a.y) * av_x >= 0;
+	var v_ab = (b.x - a.x) * av_y - (b.y - a.y) * av_x > 0;
 
-	if((c.x - a.x) * av_y - (c.y - a.y) * av_x >= 0 == v_ab) return false;
+	if((c.x - a.x) * av_y - (c.y - a.y) * av_x > 0 == v_ab) return false;
 
-	if((c.x - b.x) * (v.y - b.y) - (c.y - b.y) * (v.x - b.x) >= 0 != v_ab) return false;
+	if((c.x - b.x) * (v.y - b.y) - (c.y - b.y) * (v.x - b.x) > 0 != v_ab) return false;
 
 	return true;
 }
@@ -520,7 +520,7 @@ var BuildGrid = function() {
 			var newSpace = new GridSpace(vertex);
 			var triangle = GetTriangle(vertex);
 			if(triangle == null) {
-				console.log(vertex);
+				triangle = GetNearestTriangle(vertex);
 			}
 			newSpace.pathNode.pathable = triangle.pathNode.pathable;
 			GridSpaces[CoordinateToIndex(x, y)] = newSpace;
@@ -531,26 +531,12 @@ var BuildGrid = function() {
 		for(var y = starty; y <= endy; y+= GridStep) {
 			var space = GridSpaces[CoordinateToIndex(x, y)]
 			var adj = [];
-			var triangleOfSpace = GetTriangle({ x: x, y: y });
 			for(var xx = -1; xx < 2; xx++) {
 				for(var yy = -1; yy < 2; yy++) {
 					if(xx == 0 && yy == 0) continue;
 					var gridSpace = GridSpaces[CoordinateToIndex(x + (xx * GridStep), y + (yy * GridStep))];
 					if(gridSpace) {
-						var triangleOfAdjacent = GetTriangle({ x: x + (xx * GridStep), y: y + (yy * GridStep) });
-						var isAdj = false;
-						if(triangleOfAdjacent == triangleOfSpace) {
-							isAdj = true;
-						} else {
-							for(var i = 0; i < triangleOfAdjacent.adjacent.length; i++) {
-								if(triangleOfAdjacent.adjacent[i] == triangleOfSpace) {
-									isAdj = true;
-								}
-							}
-						}		
-						if(isAdj) {
-							adj.push(gridSpace);
-						}
+						adj.push(gridSpace);
 					}
 				}
 			}
@@ -719,6 +705,20 @@ var GetTriangle = function(vertex) {
 		}
 	}
 	return null;
+}
+
+var GetNearestTriangle = function(vertex) {
+	var nearest = null;
+	var nearestDistance = 9999999999;
+	for(var i = 0; i < Triangles.length; i++) {
+		var trianglecentre = Triangles[i].GetMiddle();
+		var distance = Math.hypot(trianglecentre.x - vertex.x, trianglecentre.y - vertex.y);
+		if(distance < nearestDistance) {
+			nearest = Triangles[i];
+			nearestDistance = distance;
+		}
+	}
+	return nearest;
 }
 
 var GetGridSpace = function(vertex) {
