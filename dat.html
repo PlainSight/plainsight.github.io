@@ -243,6 +243,41 @@ var DrawPath = function(path) {
 	DrawPathNodes();
 }
 
+var DrawGatedPath = function(path) {
+
+	for(var ww = 0; ww + 1 < path.length; ww++) {
+		var v1 = path[ww].vertices[0];
+		var v2 = path[ww].vertices[1];
+		var v3 = path[ww+1].vertices[0];
+		var v4 = path[ww+1].vertices[1];
+		var vs1 = [v1, v2, v3];
+		var vs2 = [v3, v4, v1];
+		var vs3 = [v3, v4, v2];
+		var vs4 = [v1, v2, v4];
+		var tris = [vs1, vs2, vs3, vs4];
+		
+		for(var qq = 0; qq < 4; qq++) {
+			Ctx.beginPath();
+			for (var i = 0; i < 3; i++) {
+				var j = (i + 1) % 3;
+				var x1 = tris[qq][i].x;
+				var y1 = tris[qq][i].y;
+				var x2 = tris[qq][j].x;
+				var y2 = tris[qq][j].y;
+				if(i === 0) {
+					Ctx.moveTo(x1, y1);
+				}
+				Ctx.lineTo(x2, y2);
+			}
+			Ctx.closePath();
+			Ctx.fillStyle = '#000077';
+			Ctx.strokeStyle = '#000077';
+			Ctx.fill();
+			Ctx.stroke();
+		}
+	}
+}
+
 var DrawText = function(text, y) {
 	var x = 30;
 	Ctx.font = "bold 20px Arial";
@@ -566,20 +601,12 @@ var SimplifyPath = function(path) {
 	for(var i = 0; i + 1 < path.length; i++) {
 		rawgateways.push(new Gateway(path[i].triangle.SharedVertices(path[i+1].triangle)));
 	}
-	
-	for(var i = 0; i < rawgateways.length; i++) {
-		DrawLines(rawgateways[i].vertices, '#00DD00');
-		//Drawcircle(vertex, radius, color)
-	}
-	
+
 	if(rawgateways.length < 2) return;
 	
 	//raw gateways constructed
 	
 	var gateways = [];
-	var pivots = [];
-	var rightVertices = [];
-	var leftVertices = [];
 	
 	var currentPivot = 0;
 		
@@ -588,7 +615,6 @@ var SimplifyPath = function(path) {
 		gateways.push(rawgateways[currentPivot]);
 		
 		var pivotVertex = rawgateways[currentPivot].myUniqueVertex(rawgateways[currentPivot+1]);
-		pivots.push(pivotVertex);
 		
 		currentPivot++;
 		
@@ -610,9 +636,6 @@ var SimplifyPath = function(path) {
 		var leftUpdated = true;
 		
 		while(rightUpdated && leftUpdated) {
-			
-			leftVertices.push(leftVertex);
-			rightVertices.push(rightVertex);
 			
 			rightUpdated = false;
 			leftUpdated = false;
@@ -637,12 +660,12 @@ var SimplifyPath = function(path) {
 				temprightVertex = tempside1Vertex;
 			}				
 			
-			if(IsRight([ pivotVertex, leftVertex ], templeftVertex) && IsLeft([ pivotVertex, rightVertex ], templeftVertex)) {
+			if((IsRight([ pivotVertex, leftVertex ], templeftVertex) && IsLeft([ pivotVertex, rightVertex ], templeftVertex)) || leftVertex == templeftVertex) {
 				leftVertex = templeftVertex;
 				leftUpdated = true;
 			}
 			
-			if(IsLeft([ pivotVertex, rightVertex ], temprightVertex) && IsRight([ pivotVertex, leftVertex ], temprightVertex)) {
+			if((IsLeft([ pivotVertex, rightVertex ], temprightVertex) && IsRight([ pivotVertex, leftVertex ], temprightVertex)) || rightVertex == temprightVertex) {
 				rightVertex = temprightVertex;
 				rightUpdated = true;
 			}
@@ -652,6 +675,14 @@ var SimplifyPath = function(path) {
 	}
 	
 	gateways.push(rawgateways[rawgateways.length - 1]);
+		
+	//draw stuff
+	DrawGatedPath(gateways);
+	
+	for(var i = 0; i < rawgateways.length; i++) {
+		DrawLines(rawgateways[i].vertices, '#00DD00');
+		//Drawcircle(vertex, radius, color)
+	}
 	
 	for(var i = 0; i < gateways.length; i++) {
 		DrawLines(gateways[i].vertices, '#006600');
