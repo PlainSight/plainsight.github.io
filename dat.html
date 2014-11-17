@@ -216,15 +216,19 @@ var DrawLines = function(path, color) {
 	Ctx.closePath();
 }
 
+var DrawCircle = function(vertex, radius, color) {
+	Ctx.beginPath();
+	Ctx.strokeStyle = BLACK;
+	Ctx.fillStyle = color;
+	Ctx.arc(vertex.x, vertex.y, radius, 0, 2 * Math.PI, false);
+	Ctx.stroke();
+	Ctx.fill();
+	Ctx.closePath();
+}
+
 var DrawPathNodes = function() {
 	for(var i = 0; i < 2; i++) {
-		Ctx.beginPath();
-		Ctx.strokeStyle = BLACK;
-		Ctx.fillStyle = DARKBLUE;
-		Ctx.arc(PathVertices[i].x, PathVertices[i].y, 10, 0, 2 * Math.PI, false);
-		Ctx.stroke();
-		Ctx.fill();
-		Ctx.closePath();
+		DrawCircle(PathVertices[i], 10, DARKBLUE);
 	}
 }
 
@@ -538,9 +542,121 @@ var FindPath = function(startVertex, endVertex) {
 		Path.push(currentNode);
 		currentNode = currentNode.parent;
 	}
-	
+		
 	DrawPath(Path);
 	DrawText("Triangle - discovered: " + visited + ", polled: " + polled, 50);
+	
+	SimplifyPath(Path);
+}
+
+var Gateway = function(vertices) {
+	this.vertices = vertices;
+}
+Gateway.prototype.myUniqueVertex = function(other) {
+	if(this.vertices[0] != other.vertices[0] && this.vertices[0] != other.vertices[1]) {
+		return this.vertices[0];
+	}
+	return this.vertices[1];
+}
+
+var SimplifyPath = function(path) {
+
+	var rawgateways = [];
+	
+	for(var i = 0; i + 1 < path.length; i++) {
+		rawgateways.push(new Gateway(path[i].triangle.SharedVertices(path[i+1].triangle)));
+	}
+	
+	for(var i = 0; i < rawgateways.length; i++) {
+		DrawLines(rawgateways[i].vertices, '#00DD00');
+		//Drawcircle(vertex, radius, color)
+	}
+	
+	if(rawgateways.length < 2) return;
+	
+	//raw gateways constructed
+	
+	var gateways = [];
+	var pivots = [];
+	var rightVertices = [];
+	var leftVertices = [];
+	
+	var currentPivot = 0;
+		
+	while(currentPivot + 1 < rawgateways.length) {
+		
+		gateways.push(rawgateways[currentPivot]);
+		
+		var pivotVertex = rawgateways[currentPivot].myUniqueVertex(rawgateways[currentPivot+1]);
+		pivots.push(pivotVertex);
+		
+		currentPivot++;
+		
+		var side1Vertex = rawgateways[currentPivot].vertices[0];
+		var side2Vertex = rawgateways[currentPivot].vertices[1];
+		
+		var leftVertex;
+		var rightVertex;
+				
+		if(IsRight([ pivotVertex, side1Vertex ], side2Vertex )) {
+			leftVertex = side1Vertex;
+			rightVertex = side2Vertex;
+		} else {
+			leftVertex = side2Vertex;
+			rightVertex = side1Vertex;
+		}
+		
+		var rightUpdated = true;
+		var leftUpdated = true;
+		
+		while(rightUpdated && leftUpdated) {
+			
+			leftVertices.push(leftVertex);
+			rightVertices.push(rightVertex);
+			
+			rightUpdated = false;
+			leftUpdated = false;
+			
+			currentPivot++;
+			
+			if(currentPivot >= rawgateways.length) {
+				break;
+			}
+			
+			var tempside1Vertex = rawgateways[currentPivot].vertices[0];
+			var tempside2Vertex = rawgateways[currentPivot].vertices[1];
+			
+			var templeftVertex;
+			var temprightVertex;
+			
+			if(IsRight([ pivotVertex, tempside1Vertex ], tempside2Vertex )) {
+				templeftVertex = tempside1Vertex;
+				temprightVertex = tempside2Vertex;
+			} else {
+				templeftVertex = tempside2Vertex;
+				temprightVertex = tempside1Vertex;
+			}				
+			
+			if(IsRight([ pivotVertex, leftVertex ], templeftVertex) && IsLeft([ pivotVertex, rightVertex ], templeftVertex)) {
+				leftVertex = templeftVertex;
+				leftUpdated = true;
+			}
+			
+			if(IsLeft([ pivotVertex, rightVertex ], temprightVertex) && IsRight([ pivotVertex, leftVertex ], temprightVertex)) {
+				rightVertex = temprightVertex;
+				rightUpdated = true;
+			}
+		}
+		
+		currentPivot--;
+	}
+	
+	gateways.push(rawgateways[rawgateways.length - 1]);
+	
+	for(var i = 0; i < gateways.length; i++) {
+		DrawLines(gateways[i].vertices, '#006600');
+		//Drawcircle(vertex, radius, color)
+	}
 }
 
 //fun static methods because organisation is for scrubs
@@ -548,6 +664,10 @@ var FindPath = function(startVertex, endVertex) {
 //determines if candidate is to the left of line where line is vertex a -> b
 var IsLeft = function(line, candidate) {
 	return ((line[1].x - line[0].x)*(candidate.y - line[0].y) - (line[1].y - line[0].y)*(candidate.x - line[0].x)) >= 0;
+}
+
+var IsRight = function(line, candidate) {
+	return ((line[1].x - line[0].x)*(candidate.y - line[0].y) - (line[1].y - line[0].y)*(candidate.x - line[0].x)) <= 0;
 }
 
 var GetTriangle = function(vertex) {
