@@ -50,6 +50,7 @@ var BOTTOMLEFT = { x: 0, y: 600 };
 var BOTTOMRIGHT = { x: 800, y: 600 };
 
 //variable names no longer refer to color within
+var LIGHTLIGHTBLUE = '#87CEEB';
 var LIGHTBLUE = '#169D5B';
 var DARKBLUE = '#513317';
 var LIGHTYELLOW = '#FFF176';
@@ -109,7 +110,9 @@ var MouseDown = function(e) {
 var MouseUp = function(e) {
 	if(DraggingPathNode != null) {
 		DraggingPathNode = null;
+		DrawTriangles();
 		FindPath(PathVertices[0], PathVertices[1]);
+		FindGridPath(PathVertices[0], PathVertices[1]);
 	}
 }
 
@@ -194,14 +197,32 @@ var DrawTriangles = function() {
 	DrawPathNodes();
 }
 
+var DrawGridSpace = function(space, colour) {
+	Ctx.strokeStyle = colour;
+	Ctx.fillStyle = colour;
+
+	Ctx.beginPath();
+	Ctx.arc(space.vertex.x, space.vertex.y, 2, 0, 2 * Math.PI, false);
+	Ctx.stroke();
+	Ctx.fill();
+	Ctx.closePath();
+	
+	if(space.pathNode.parent != null) {
+		DrawLines([space.GetMiddle(), space.pathNode.parent.triangle.GetMiddle()], colour);
+	}
+}
+
 var SelectTriangle = function(vertex) {
 	DrawTriangles();
 	var triangle = GetTriangle(vertex);
 	DrawTriangle(triangle, true);
 }
 
-var DrawLines = function(path) {
+var DrawLines = function(path, color) {
 	Ctx.strokeStyle = LIGHTORANGE;
+	if(color) {
+		Ctx.strokeStyle = color;
+	}
 	Ctx.beginPath();
 	Ctx.moveTo(path[0].x, path[0].y);
 	for(var i = 1; i < path.length; i++) {
@@ -234,6 +255,22 @@ var DrawPath = function(path) {
 	DrawPathNodes();
 }
 
+var DrawGridPath = function(path) {
+	var grids = path.map(function(pn) { return pn.triangle });
+	DrawLines(grids.map(function(t) { return t.GetMiddle(); }), LIGHTRED);
+	DrawPathNodes();
+}
+
+var DrawText = function(text, y) {
+	var x = 30;
+	Ctx.font = "bold 20px Arial";
+	Ctx.strokeStyle = 'black';
+	Ctx.lineWidth = 3;
+	Ctx.strokeText(text, x, y);
+	Ctx.fillStyle = 'white';
+	Ctx.fillText(text, x, y);
+}
+
 var GetPathNodeSelection = function(vertex) {
 	for(var i = 0; i < 2; i++) {
 		if(Math.hypot(PathVertices[i].x - vertex.x, PathVertices[i].y - vertex.y) < 11) {
@@ -258,6 +295,7 @@ var Triangle = function(v1, v2, v3) {
 }
 //v for vertexxa
 Triangle.prototype.IsVertexInside = function(v) {
+
 	var a = this.vertices[0];
 	var b = this.vertices[1];
 	var c = this.vertices[2];
@@ -420,6 +458,22 @@ Triangle.prototype.GetMiddle = function() {
 	return { x: ax / 3, y: ay / 3 };
 }
 
+var GridStep = 10;
+var GridMax = 1000;
+
+var CoordinateToIndex = function(x, y) {
+	return ((x / (GridStep/2)) * GridMax) + (y / (GridStep/2));
+}
+
+var GridSpace = function(vertex) {
+	this.vertex = vertex;
+	this.adjacent = [];
+	this.pathNode = new PathNode(this);
+}
+GridSpace.prototype.GetMiddle = function() {
+	return this.vertex;
+}
+
 var PathNode = function(tri) {
 	this.triangle = tri;
 	this.pathable = true;
@@ -450,11 +504,119 @@ PathNode.prototype.Visit = function(parent, target) {
 	this.value = this.pathlength + this.heuristic;
 }
 
-var Path = [];
+var GridSpaces = [];
+
+var BuildGrid = function() {
+	GridSpaces = [];
+
+	var startx = TOPLEFT.x + (GridStep/2);
+	var endx = TOPRIGHT.x - (GridStep/2);
+	var starty = TOPLEFT.y + (GridStep/2);
+	var endy = BOTTOMLEFT.y - (GridStep/2);
+	
+	for(var x = startx; x <= endx; x += GridStep) {
+		for(var y = starty; y <= endy; y += GridStep) {
+			var vertex = { x: x, y: y };
+			var newSpace = new GridSpace(vertex);
+			var triangle = GetTriangle(vertex);
+			if(triangle == null) {
+				triangle = GetNearestTriangle(vertex);
+			}
+			newSpace.pathNode.pathable = triangle.pathNode.pathable;
+			GridSpaces[CoordinateToIndex(x, y)] = newSpace;
+		}
+	}
+	
+	for(var x = startx; x <= endx; x += GridStep) {
+		for(var y = starty; y <= endy; y+= GridStep) {
+			var space = GridSpaces[CoordinateToIndex(x, y)]
+			var adj = [];
+			for(var xx = -1; xx < 2; xx++) {
+				for(var yy = -1; yy < 2; yy++) {
+					if(xx == 0 && yy == 0) continue;
+					var gridSpace = GridSpaces[CoordinateToIndex(x + (xx * GridStep), y + (yy * GridStep))];
+					if(gridSpace) {
+						adj.push(gridSpace);
+					}
+				}
+			}
+			space.adjacent = adj;
+		}
+	}
+}
+
+var FindGridPath = function(startVertex, endVertex) {
+	BuildGrid();
+
+	var GridPath = [];
+
+	var startNode = GetGridSpace(startVertex).pathNode;
+	var endNode = GetGridSpace(endVertex).pathNode;
+		
+	if(startNode.pathable == false || endNode.pathable == false) {
+		//return if either start or end are not pathable
+		return;
+	}
+
+	var openSet = [];
+	
+	var visited = 0;
+	var polled = 0;
+	
+	startNode.pathlength = 0;
+	startNode.heuristic = startNode.GetDistance(endNode);
+	startNode.value = startNode.heuristic;
+	startNode.visited = true;
+	
+	openSet.push(startNode);
+	
+	while(openSet.length != 0) {
+		
+		openSet.sort(function(a, b) { return b.value - a.value; });
+		
+		var nominated = openSet.pop();
+		
+		polled++;
+		
+		if(nominated === endNode) {
+			break;
+		}
+	
+		var adjacent = nominated.GetAdjacent();
+		
+		for(var i = 0; i < adjacent.length; i++) {
+			var current = adjacent[i];
+			
+			if(current.pathable) {
+				if(!current.visited) {
+					visited++;
+					current.Visit(nominated, endNode);
+					openSet.push(current);
+				} else {
+					var newPathLength = nominated.pathlength + nominated.GetDistance(current);
+					if(newPathLength < current.pathlength) {
+						current.Visit(nominated, endNode);
+					}
+				}
+			}
+		}
+	}
+	
+	//end node either has parent == null: no path, or parent == something: path exists
+	var currentNode = endNode;
+	while(currentNode != null) {
+		GridPath.push(currentNode);
+		//DrawGridSpace(currentNode.triangle, LIGHTRED);
+		currentNode = currentNode.parent;
+	}
+		
+	DrawGridPath(GridPath);
+	DrawText("Grid - discovered: " + visited + ", polled: " + polled, 20);
+}
 
 var FindPath = function(startVertex, endVertex) {
 	
-	Path = [];
+	var Path = [];
 	
 	for(var i = 0; i < Triangles.length; i++) {
 		Triangles[i].pathNode.parent = null;
@@ -474,6 +636,9 @@ var FindPath = function(startVertex, endVertex) {
 
 	var openSet = [];
 	
+	var visited = 0;
+	var polled = 0;
+	
 	startNode.pathlength = 0;
 	startNode.heuristic = startNode.GetDistance(endNode);
 	startNode.value = startNode.heuristic;
@@ -487,27 +652,27 @@ var FindPath = function(startVertex, endVertex) {
 		
 		var nominated = openSet.pop();
 		
-		console.log(nominated);
-		
-		DrawTriangle(nominated.triangle, false, true);
+		polled++;
 		
 		if(nominated === endNode) {
 			break;
 		}
 	
 		var adjacent = nominated.GetAdjacent();
-		
+
 		for(var i = 0; i < adjacent.length; i++) {
 			var current = adjacent[i];
 			
 			if(current.pathable) {
 				if(!current.visited) {
+					visited++;
 					current.Visit(nominated, endNode);
 					openSet.push(current);
 				} else {
+					
 					var newPathLength = nominated.pathlength + current.GetDistance(nominated);
 					
-					if(newPathLength < current.pathLength) {
+					if(newPathLength < current.pathlength) {
 						current.Visit(nominated, endNode);
 					}
 				}
@@ -522,10 +687,8 @@ var FindPath = function(startVertex, endVertex) {
 		currentNode = currentNode.parent;
 	}
 	
-	console.log(Path);
-	
-	DrawTriangles();
 	DrawPath(Path);
+	DrawText("Triangle - discovered: " + visited + ", polled: " + polled, 50);
 }
 
 //fun static methods because organisation is for scrubs
@@ -542,6 +705,28 @@ var GetTriangle = function(vertex) {
 		}
 	}
 	return null;
+}
+
+var GetNearestTriangle = function(vertex) {
+	var nearest = null;
+	var nearestDistance = 9999999999;
+	for(var i = 0; i < Triangles.length; i++) {
+		var trianglecentre = Triangles[i].GetMiddle();
+		var distance = Math.hypot(trianglecentre.x - vertex.x, trianglecentre.y - vertex.y);
+		if(distance < nearestDistance) {
+			nearest = Triangles[i];
+			nearestDistance = distance;
+		}
+	}
+	return nearest;
+}
+
+var GetGridSpace = function(vertex) {
+	var x = (Math.floor(vertex.x / GridStep) * GridStep) + (GridStep/2);
+	var y = (Math.floor(vertex.y / GridStep) * GridStep) + (GridStep/2);
+	var index = CoordinateToIndex(x, y);
+	
+	return GridSpaces[index];
 }
 
 var Flip = function(t1, t2) {
@@ -612,26 +797,10 @@ var AddVertex = function(vertex) {
 		if(t.IsVertexInside(vertex)) {
 			inside = t;
 		}
-		/*
-		if(t.IsVertexOnEdge(vertex)) {
-			edge = t;
-		}
-		*/
 		if(edge != null || inside != null) {
 			break;
 		}
 	}
-	/*
-	if(edge != null) {
-		var newTriangles = edge.addVertexToEdge(v);
-		for(var i = 0; i < newTriangles.length; i++) {
-			if(!newTriangles[i].dead) {
-				CheckAndFlip(newTriangles[i]);
-			}
-		}
-		return;
-	}
-	*/
 	if(inside != null) {
 		var newTriangles = inside.AddVertex(vertex);
 		for(var i = 0; i < newTriangles.length; i++) {
