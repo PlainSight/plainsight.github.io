@@ -483,6 +483,7 @@ var PathNode = function(tri) {
 	this.heuristic = 0;
 	this.pathlength = 0;
 	this.value = 0;
+	this.entryPoint = null;
 }
 PathNode.prototype.TogglePathable = function() {
 	this.pathable = !this.pathable;
@@ -500,9 +501,68 @@ PathNode.prototype.GetDistance = function(other) {
 PathNode.prototype.Visit = function(parent, target) {
 	this.parent = parent;
 	this.visited = true;
-	this.pathlength = this.GetDistance(parent) + parent.pathlength;
+	this.pathlength = GetPathValue(parent, this);
 	this.heuristic = this.GetDistance(target);
 	this.value = this.pathlength + this.heuristic;
+}
+
+var GetPathValue = function(firstNode, secondNode) {
+	//basic middle to middle estimate
+	return firstNode.GetDistance(parent) + secondNode.pathlength;
+
+	//three methods
+	//first, distance between firstNode.entryPoint and the closest point on the triangle of secondNode - this requires calculation of the entry point for secondNode, after calculating that we simply assign that to entryPoint.
+
+	var sharedEdge = firstNode.triangle.SharedVertices(secondNode.triangle);
+
+	var closestPoint = closestPointToLineSegment(firstNode.entryPoint, sharedEdge);
+
+	secondNode.entryPoint = closestPoint;
+	
+	var firstG = Math.hypot(firstNode.entryPoint.x - closestPoint.x, firstNode.entryPoint.y - closestPoint.y);
+
+	//can only use this if there is an entry edge for the first node
+	var secondG = 0;
+	if(firstNode.parent != null) {
+		//second, the length of the arc around the shared vertex between the triangles of firstNode and secondNode given the radius of the pathing entity. We can set radius to 15;
+
+		//find entry edge of first node
+		var firstEntry = firstNode.parent.triangle.SharedVertices(firstNode.triangle);
+
+		//find entry edge of second node
+
+		var p12 = dist2()
+
+		//arc length = (Math.PI / 180) * theta * radius
+		//Math.acos
+
+
+
+
+
+
+
+	}
+	
+
+	//third, difference between secondNode.heuristic and firstNode.heuristic
+	var thirdG = Math.abs(secondNode.heuristic - firstNode.heuristic);
+
+	return Math.max(firstG, secondG, thirdG);
+}
+
+function sqr(x) { return x * x }
+function dist2(v, w) { return sqr(v.x - w.x) + sqr(v.y - w.y) }
+//p = point, l = line
+function closestPointToLineSegment(p, l) {
+	var v = l[0];
+	var w = l[1];
+	var l2 = dist2(v, w);
+	if (l2 == 0) return dist2(p, v);
+	var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+	if (t < 0) return v;
+	if (t > 1) return w;
+	return { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
 }
 
 var FindPath = function(startVertex, endVertex) {
@@ -515,6 +575,7 @@ var FindPath = function(startVertex, endVertex) {
 		Triangles[i].pathNode.heuristic = 0;
 		Triangles[i].pathNode.pathlength = 0;
 		Triangles[i].pathNode.value = 0;
+		Triangles[i].pathNode.entryPoint = null;
 	}
 	
 	var startNode = GetTriangle(startVertex).pathNode;
@@ -534,6 +595,7 @@ var FindPath = function(startVertex, endVertex) {
 	startNode.heuristic = startNode.GetDistance(endNode);
 	startNode.value = startNode.heuristic;
 	startNode.visited = true;
+	startNode.entryPoint = startVertex;
 	
 	openSet.push(startNode);
 	
@@ -708,20 +770,6 @@ var GetTriangle = function(vertex) {
 		}
 	}
 	return null;
-}
-
-var GetNearestTriangle = function(vertex) {
-	var nearest = null;
-	var nearestDistance = 9999999999;
-	for(var i = 0; i < Triangles.length; i++) {
-		var trianglecentre = Triangles[i].GetMiddle();
-		var distance = Math.hypot(trianglecentre.x - vertex.x, trianglecentre.y - vertex.y);
-		if(distance < nearestDistance) {
-			nearest = Triangles[i];
-			nearestDistance = distance;
-		}
-	}
-	return nearest;
 }
 
 var Flip = function(t1, t2) {
