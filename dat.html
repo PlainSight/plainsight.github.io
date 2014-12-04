@@ -244,7 +244,7 @@ var DrawPath = function(path) {
 }
 
 var DrawGatedPath = function(path) {
-
+	return;
 	for(var ww = 0; ww + 1 < path.length; ww++) {
 		var v1 = path[ww].vertices[0];
 		var v2 = path[ww].vertices[1];
@@ -294,6 +294,21 @@ var GetPathNodeSelection = function(vertex) {
 			return PathVertices[i];
 		}
 	}
+}
+
+//geometric helpers
+function sqr(x) { return x * x }
+function dist2(v, w) { return sqr(v.x - w.x) + sqr(v.y - w.y) }
+//p = point, l = line
+function closestPointToLineSegment(p, l) {
+	var v = l[0];
+	var w = l[1];
+	var l2 = dist2(v, w);
+	if (l2 == 0) return dist2(p, v);
+	var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+	if (t < 0) return v;
+	if (t > 1) return w;
+	return { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) };
 }
 
 </script>
@@ -501,15 +516,16 @@ PathNode.prototype.GetDistance = function(other) {
 PathNode.prototype.Visit = function(parent, target) {
 	this.parent = parent;
 	this.visited = true;
-	this.pathlength = GetPathValue(parent, this);
+	var oldPathlength = this.GetDistance(parent) + parent.pathlength;
+	this.pathlength = parent.pathlength + GetPathValue(parent, this);
+	console.log('-----------');
+	console.log('old: ' + oldPathlength);
+	console.log('new: ' + this.pathlength);
 	this.heuristic = this.GetDistance(target);
 	this.value = this.pathlength + this.heuristic;
 }
 
 var GetPathValue = function(firstNode, secondNode) {
-	//basic middle to middle estimate
-	return firstNode.GetDistance(parent) + secondNode.pathlength;
-
 	//three methods
 	//first, distance between firstNode.entryPoint and the closest point on the triangle of secondNode - this requires calculation of the entry point for secondNode, after calculating that we simply assign that to entryPoint.
 
@@ -530,40 +546,54 @@ var GetPathValue = function(firstNode, secondNode) {
 		var firstEntry = firstNode.parent.triangle.SharedVertices(firstNode.triangle);
 
 		//find entry edge of second node
+		var secondEntry = sharedEdge;
 
-		var p12 = dist2()
+		var angleVertices = GetAngleVertices(firstEntry, secondEntry);
+		var p1 = angleVertices[0]; //p1 is the axis
+		var p2 = angleVertices[1];
+		var p3 = angleVertices[2];
 
-		//arc length = (Math.PI / 180) * theta * radius
-		//Math.acos
+		var p12 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+		var p13 = Math.hypot(p1.x - p3.x, p1.y - p3.y);
+		var p23 = Math.hypot(p2.x - p3.x, p2.y - p3.y);
 
+		var numerator = sqr(p12) + sqr(p13) - sqr(p23);
+		var denominator = 2 * p12 * p13;
+		var angle = Math.acos(numerator/denominator);
 
-
-
-
-
-
+		var arclength = angle * 15;
+		secondG = arclength;
 	}
 	
 
 	//third, difference between secondNode.heuristic and firstNode.heuristic
 	var thirdG = Math.abs(secondNode.heuristic - firstNode.heuristic);
 
+	console.log('g1:     ' + firstG);
+	console.log('g2:     ' + secondG);
+	console.log('g3:     ' + thirdG);
+	console.log('chosen: ' + Math.max(firstG, secondG, thirdG));
 	return Math.max(firstG, secondG, thirdG);
+
 }
 
-function sqr(x) { return x * x }
-function dist2(v, w) { return sqr(v.x - w.x) + sqr(v.y - w.y) }
-//p = point, l = line
-function closestPointToLineSegment(p, l) {
-	var v = l[0];
-	var w = l[1];
-	var l2 = dist2(v, w);
-	if (l2 == 0) return dist2(p, v);
-	var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
-	if (t < 0) return v;
-	if (t > 1) return w;
-	return { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+//first angle is the pivot
+var GetAngleVertices = function(line1, line2) {
+	if(line1[0].x == line2[0].x && line1[0].y == line2[0].y) {
+		return [line1[0], line1[1], line2[1]];
+	}
+	if(line1[1].x == line2[0].x && line1[1].y == line2[0].y) {
+		return [line1[1], line1[0], line2[1]];
+	}
+	if(line1[0].x == line2[1].x && line1[0].y == line2[1].y) {
+		return [line1[0], line1[1], line2[0]];
+	}
+	if(line1[1].x == line2[1].x && line1[1].y == line2[1].y) {
+		return [line1[1], line1[0], line2[0]];
+	}
 }
+
+
 
 var FindPath = function(startVertex, endVertex) {
 	
@@ -622,8 +652,8 @@ var FindPath = function(startVertex, endVertex) {
 					current.Visit(nominated, endNode);
 					openSet.push(current);
 				} else {
-					
-					var newPathLength = nominated.pathlength + current.GetDistance(nominated);
+					var newPathLength = nominated.pathlength + GetPathValue(nominated, current);
+					// var newPathLength = nominated.pathlength + current.GetDistance(nominated);
 					
 					if(newPathLength < current.pathlength) {
 						current.Visit(nominated, endNode);
@@ -657,7 +687,6 @@ Gateway.prototype.myUniqueVertex = function(other) {
 }
 
 var SimplifyPath = function(path) {
-
 	var rawgateways = [];
 	
 	for(var i = 0; i + 1 < path.length; i++) {
