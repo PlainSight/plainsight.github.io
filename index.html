@@ -694,8 +694,6 @@ var FindPath = function(startVertex, endVertex) {
 	DrawText("Triangle - discovered: " + visited + ", polled: " + polled, 50);
 }
 
-//fun static methods because organisation is for scrubs
-
 //determines if candidate is to the left of line where line is vertex a -> b
 var IsLeft = function(line, candidate) {
 	return ((line[1].x - line[0].x)*(candidate.y - line[0].y) - (line[1].y - line[0].y)*(candidate.x - line[0].x)) >= 0;
